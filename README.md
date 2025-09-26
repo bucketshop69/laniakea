@@ -1,70 +1,69 @@
-# React + TypeScript + Vite
+# Laniakea - The Dapp Constellation
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Solana DeFi is exploding with innovation. Meteora for liquidity pools, Drift for perps, Jupiter for swaps, Marginfi for lending. But users are stuck juggling dozens of different interfaces, each with unique UX patterns, scattered data, and no unified view of their positions.
 
-Currently, two official plugins are available:
+We believe now is the right time to build the Bloomberg Terminal for Solana DeFi. The protocol ecosystem is mature enough. The data infrastructure is ready. And users are drowning in interface complexity.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+The key insight: DeFi users don't want more apps - they want better intelligence and unified execution. Imagine seeing all your positions across protocols in one dashboard, getting smart alerts when your Meteora LP goes out of range while you're levered long on Drift, or executing delta-neutral strategies with one-click cross-protocol actions.
 
-## Expanding the ESLint configuration
+Current solutions are either pure aggregators (no insights) or pure analytics (no actions). Laniakea combines both with a modular architecture: Actions, Profile, and Feed components that work consistently across any protocol.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+The wedge is sophisticated DeFi users who are already using multiple protocols. Start with Meteora + Drift integration, expand to the full Solana DeFi stack, then become the operating system for multichain DeFi strategies.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+# Laniakea DApp Integration Architecture
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## Overview
+Every dapp integrated into Laniakea follows a standardized three-module structure that ensures consistent user experience while maintaining flexibility for different protocol types.
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## The Three Core Modules
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### 1. Actions
+Interactive elements that allow users to execute protocol-specific operations.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+**Purpose**: All user-initiated transactions and interactions with the protocol  
+**Location**: Primary action panel in the interface  
+**Examples**:
+- Create new positions/pools
+- Add/deposit funds
+- Remove/withdraw funds
+- Claim rewards/fees
+- Execute swaps/trades
+- Search/discover opportunities
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
-# laniakea
+### 2. Profile  
+User's current state and historical data within the protocol.
+
+**Purpose**: Portfolio tracking, performance monitoring, and historical analysis  
+**Location**: User dashboard/profile section  
+**Components**:
+- **Current Positions**: Active stakes, pools, loans, trades
+- **Balances**: Available funds, locked funds, rewards pending
+- **Performance Metrics**: Total Value Locked (TVL), PnL, APY/returns
+- **Transaction History**: Past actions, timestamps, amounts
+- **Analytics**: Position performance over time, yield tracking
+
+### 3. Feed
+Real-time information and notifications relevant to user's positions and market conditions.
+
+**Purpose**: Keep users informed and alert them to important changes  
+**Location**: Notification panel/activity feed  
+**Content Types**:
+- **Market Updates**: General crypto market news and trends  
+- **Position Alerts**: Range notifications, liquidation warnings, opportunity alerts
+- **Protocol News**: Updates from the specific dapp/protocol
+- **Performance Notifications**: Significant PnL changes, milestone alerts
+- **Action Suggestions**: Rebalancing recommendations, new opportunities
+
+## Implementation Benefits
+
+- **Consistency**: Users learn one interface pattern that works across all protocols
+- **Modularity**: Each module can be developed and updated independently  
+- **Scalability**: New protocols can be onboarded quickly using this framework
+- **User Experience**: Familiar navigation reduces cognitive load when switching between protocols
+
+## Integration Checklist
+When adding a new dapp:
+- [ ] Map all possible user actions to the Actions module
+- [ ] Identify all user data points for the Profile module  
+- [ ] Define relevant notifications and feeds for the Feed module
+- [ ] Ensure consistent styling and interaction patterns
