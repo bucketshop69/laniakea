@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { PlusCircle, MinusCircle, Settings, User, Rss, Calendar, TrendingUp, TrendingDown, ArrowRight } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 import DappSelector, { type DappOption } from './DappSelector';
 import SarosAction from '@/modules/saros/components/SarosAction';
+import { useDappStore, type SupportedDapp } from '@/store/dappStore';
 
 interface Pool {
     pair: string;
@@ -73,19 +74,28 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
     const [addAmount, setAddAmount] = useState('');
     const [removeAmount, setRemoveAmount] = useState('');
     const [showSimulation, setShowSimulation] = useState(false);
+    const selectedDapp = useDappStore((state) => state.selectedDapp);
+    const setSelectedDapp = useDappStore((state) => state.setSelectedDapp);
+    const triggerSarosFetch = useDappStore((state) => state.fetchSarosData);
+
     const dapps: DappOption[] = [
         { id: 'saros', name: 'Saros', iconSrc: '/saros/SAROS_Mark_Purple.png' },
         { id: 'meteora', name: 'Meteora', iconSrc: '/meteora/meteora.png' }
     ];
-    const [selectedDapp, setSelectedDapp] = useState(dapps[0].id);
 
     const currentPool = pools.find(p => p.pair === selectedPool) || pools[0];
     const handleDappSelection = (id: string) => {
-        setSelectedDapp(id);
+        setSelectedDapp(id as SupportedDapp);
         setMainTab('manage');
     };
+
+    useEffect(() => {
+        if (selectedDapp === 'saros') {
+            void triggerSarosFetch();
+        }
+    }, [selectedDapp, triggerSarosFetch]);
     return (
-        <div className="col-start-8 col-span-4 w-full min-h-[600px]">
+        <div className="col-start-8 col-span-5 w-full min-h-[600px]">
             <Card className="flex flex-col h-full">
                 <DappSelector dapps={dapps} selectedId={selectedDapp} onSelect={handleDappSelection} />
                 <Tabs value={mainTab} onValueChange={setMainTab} className="flex flex-col h-full">

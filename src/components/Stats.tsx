@@ -28,7 +28,7 @@ interface StatsProps {
 
 const Stats: React.FC<StatsProps> = ({ selectedPool, currentPool, chartData }) => {
     return (
-        <Card className="col-start-2 col-span-6 w-full">
+        <Card className="col-start-1 col-span-7 w-full">
             <div className="flex flex-col">
                 <div className="flex items-center justify-between mb-6">
                     <div>

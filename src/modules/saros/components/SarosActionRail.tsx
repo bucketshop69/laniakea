@@ -16,7 +16,7 @@ export interface SarosActionRailProps<T extends string = string> {
 
 function SarosActionRail<T extends string = string>({ actions, activeAction, onSelect }: SarosActionRailProps<T>) {
   return (
-    <div className="col-span-1 flex flex-col items-center gap-2 ">
+    <div className="col-span-1 flex flex-col items-center gap-1">
       {actions.map((action) => {
         const isActive = action.id === activeAction;
 

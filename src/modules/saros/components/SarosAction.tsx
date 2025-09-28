@@ -2,21 +2,11 @@ import { useMemo, useState } from 'react';
 import { Plus, Search, Droplets } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import SarosActionRail, { type SarosActionDefinition } from './SarosActionRail';
-
-const DiscoverPlaceholder = () => (
-    <Card className="h-full rounded-2xl p-6">
-        <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-primary">Discover Pools</h2>
-            <p className="text-sm text-muted-foreground">
-                Search Saros pools and review opportunities. (Content coming soon.)
-            </p>
-        </div>
-    </Card>
-);
+import SarosDiscover from './SarosDiscover';
 
 const CreatePlaceholder = () => (
-    <Card className="h-full rounded-2xl p-6">
-        <div className="space-y-4">
+    <Card className="h-full rounded-2xl p-1">
+        <div className="space-y-1">
             <h2 className="text-lg font-semibold text-primary">Create Pool</h2>
             <p className="text-sm text-muted-foreground">
                 Configure DLMM pool parameters and launch liquidity. (Form coming soon.)
@@ -26,8 +16,8 @@ const CreatePlaceholder = () => (
 );
 
 const ManagePlaceholder = () => (
-    <Card className="h-full rounded-2xl p-6">
-        <div className="space-y-4">
+    <Card className="h-full rounded-2xl p-1">
+        <div className="space-y-1">
             <h2 className="text-lg font-semibold text-primary">Manage Liquidity</h2>
             <p className="text-sm text-muted-foreground">
                 Add, remove, or claim rewards from your Saros pools. (Controls coming soon.)
@@ -58,12 +48,16 @@ const SarosAction = () => {
                 return <ManagePlaceholder />;
             case 'discover':
             default:
-                return <DiscoverPlaceholder />;
+                return (
+                    <Card className="h-full rounded-2xl p-1">
+                        <SarosDiscover />
+                    </Card>
+                );
         }
     };
 
     return (
-        <div className="grid h-full grid-cols-12 gap-2">
+        <div className="grid h-full grid-cols-12 gap-1">
             <SarosActionRail actions={actions} activeAction={activeAction} onSelect={setActiveAction} />
             <div className="col-span-11 flex flex-col">{renderContent()}</div>
         </div>
