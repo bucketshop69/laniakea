@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 import DappSelector, { type DappOption } from './DappSelector';
+import SarosAction from '@/modules/saros/components/SarosAction';
 
 interface Pool {
     pair: string;
@@ -84,11 +85,11 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
         setMainTab('manage');
     };
     return (
-        <div className="col-start-8 col-span-4 w-full">
-            <Card className="flex flex-col">
+        <div className="col-start-8 col-span-4 w-full min-h-[600px]">
+            <Card className="flex flex-col h-full">
                 <DappSelector dapps={dapps} selectedId={selectedDapp} onSelect={handleDappSelection} />
                 <Tabs value={mainTab} onValueChange={setMainTab} className="flex flex-col h-full">
-                    <TabsList className="flex mb-6 mx-4 mt-2 rounded-lg p-1 h-auto">
+                    <TabsList className="flex mb-1 mx-1 mt-1 rounded-lg p-1 h-auto">
                         <TabsTrigger value="manage"
                             className="flex-1 data-[state=active]:bg-transparent data-[state=active]:text-primary">
                             <Settings size={16} className="mr-1" />Manage
@@ -99,194 +100,200 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
                         <TabsTrigger value="feed" className="flex-1 data-[state=active]:bg-transparent data-[state=active]:text-primary"><Rss size={16} className="mr-1" />Feed</TabsTrigger>
                     </TabsList>
 
-                    <TabsContent value="manage" className="flex-1 px-4">
-                        {/* Pool Selector */}
-                        <div className="mb-4">
-                            <label className="block  text-sm font-medium mb-2">
-                                Select Pool
-                            </label>
-                            <Select value={selectedPool} onValueChange={onSelectedPoolChange}>
-                                <SelectTrigger className="w-full px-3 py-3 text-primary text-left flex items-center 
+                    <TabsContent value="manage" className="flex-1 px-1">
+                        {selectedDapp === 'saros' ? (
+                            <SarosAction />
+                        ) : (
+                            <>
+                                {/* Pool Selector */}
+                                <div className="mb-4">
+                                    <label className="block  text-sm font-medium mb-2">
+                                        Select Pool
+                                    </label>
+                                    <Select value={selectedPool} onValueChange={onSelectedPoolChange}>
+                                        <SelectTrigger className="w-full px-3 py-3 text-primary text-left flex items-center 
                                 justify-between hover:border-blue transition-all duration-300">
-                                    <span className="text-sm ml-2">
-                                        {currentPool.apy} APY
-                                    </span>
+                                            <span className="text-sm ml-2">
+                                                {currentPool.apy} APY
+                                            </span>
 
-                                </SelectTrigger>
-                                <SelectContent className="cosmic-dropdown z-10">
-                                    {pools.map((pool, index) => (
-                                        <SelectItem
-                                            key={index}
-                                            value={pool.pair}
-                                            className="cosmic-dropdown-item w-full text-left first:rounded-t-lg last:rounded-b-lg"
+                                        </SelectTrigger>
+                                        <SelectContent className="cosmic-dropdown z-10">
+                                            {pools.map((pool, index) => (
+                                                <SelectItem
+                                                    key={index}
+                                                    value={pool.pair}
+                                                    className="cosmic-dropdown-item w-full text-left first:rounded-t-lg last:rounded-b-lg"
+                                                >
+                                                    <div className="flex justify-between items-center">
+                                                        <div>
+                                                            <span className="text-primary font-medium">{pool.pair}</span>
+                                                            <div className="text-xs  mt-1">
+                                                                TVL: {pool.tvl} • Fee: {pool.fee}
+                                                            </div>
+                                                        </div>
+                                                        <span className="text-blue text-sm font-medium">{pool.apy}</span>
+                                                    </div>
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                {/* Sub-Tab Navigation */}
+                                <div className="flex mb-6 bg-muted-foreground/10 rounded-lg p-1">
+                                    {[
+                                        { id: 'add', label: 'Add', icon: PlusCircle },
+                                        { id: 'remove', label: 'Remove', icon: MinusCircle }
+                                    ].map(tab => (
+                                        <Button
+                                            key={tab.id}
+                                            onClick={() => setManageSubTab(tab.id)}
+                                            variant={manageSubTab === tab.id ? "default" : "ghost"}
+                                            className="flex-1"
                                         >
-                                            <div className="flex justify-between items-center">
-                                                <div>
-                                                    <span className="text-primary font-medium">{pool.pair}</span>
-                                                    <div className="text-xs  mt-1">
-                                                        TVL: {pool.tvl} • Fee: {pool.fee}
+                                            <tab.icon size={16} className="mr-1" />
+                                            {tab.label}
+                                        </Button>
+                                    ))}
+                                </div>
+
+                                {/* Add Liquidity Form */}
+                                {manageSubTab === 'add' && (
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="block  text-sm font-medium mb-2">
+                                                Amount
+                                            </label>
+                                            <div className="flex">
+                                                <Input
+                                                    type="number"
+                                                    value={addAmount}
+                                                    onChange={(e) => setAddAmount(e.target.value)}
+                                                    placeholder="0.00"
+                                                />
+                                                <Button className="">
+                                                    MAX
+                                                </Button>
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-card p-3">
+                                            <p className=" text-xs mb-2">You will receive</p>
+                                            <div className="space-y-1">
+                                                <div className="flex justify-between text-sm">
+                                                    <span className="">LP Tokens</span>
+                                                    <span className="text-primary">~{addAmount ? (parseFloat(addAmount) * 0.85).toFixed(1) : '0.0'}</span>
+                                                </div>
+                                                <div className="flex justify-between text-sm">
+                                                    <span className="">Pool Share</span>
+                                                    <span className="text-blue">{addAmount ? (parseFloat(addAmount) * 0.01).toFixed(2) : '0.00'}%</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {addAmount && parseFloat(addAmount) > 0 && (
+                                            <Button
+                                                variant={'ghost'}
+                                                className="w-full"
+                                                onClick={() => setShowSimulation((prev) => !prev)}
+                                            >
+                                                {showSimulation ? 'Hide' : 'Simulate Strategy'} ↗
+                                            </Button>
+                                        )}
+
+                                        {showSimulation && addAmount && parseFloat(addAmount) > 0 && (
+                                            <div className="-dark p-3 space-y-2">
+                                                <p className="text-purple text-xs font-medium mb-2">Strategy Simulation</p>
+                                                <div className="space-y-1 text-xs">
+                                                    <div className="flex justify-between">
+                                                        <span className="">Projected APY</span>
+                                                        <span className="text-blue">{currentPool.apy}</span>
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span className="">IL Risk (30d)</span>
+                                                        <span className="text-yellow-400">2.3%</span>
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span className="">Expected Return (30d)</span>
+                                                        <span className="text-blue">+${(parseFloat(addAmount) * 0.02).toFixed(0)}</span>
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span className="">Max Drawdown</span>
+                                                        <span className="text-red-400">-5.1%</span>
                                                     </div>
                                                 </div>
-                                                <span className="text-blue text-sm font-medium">{pool.apy}</span>
                                             </div>
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
+                                        )}
 
-                        {/* Sub-Tab Navigation */}
-                        <div className="flex mb-6 bg-muted-foreground/10 rounded-lg p-1">
-                            {[
-                                { id: 'add', label: 'Add', icon: PlusCircle },
-                                { id: 'remove', label: 'Remove', icon: MinusCircle }
-                            ].map(tab => (
-                                <Button
-                                    key={tab.id}
-                                    onClick={() => setManageSubTab(tab.id)}
-                                    variant={manageSubTab === tab.id ? "default" : "ghost"}
-                                    className="flex-1"
-                                >
-                                    <tab.icon size={16} className="mr-1" />
-                                    {tab.label}
-                                </Button>
-                            ))}
-                        </div>
-
-                        {/* Add Liquidity Form */}
-                        {manageSubTab === 'add' && (
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="block  text-sm font-medium mb-2">
-                                        Amount
-                                    </label>
-                                    <div className="flex">
-                                        <Input
-                                            type="number"
-                                            value={addAmount}
-                                            onChange={(e) => setAddAmount(e.target.value)}
-                                            placeholder="0.00"
-                                        />
-                                        <Button className="">
-                                            MAX
+                                        <Button className="w-full">
+                                            <PlusCircle size={16} className="mr-2" />
+                                            Launch Liquidity
                                         </Button>
-                                    </div>
-                                </div>
-
-                                <div className="bg-card p-3">
-                                    <p className=" text-xs mb-2">You will receive</p>
-                                    <div className="space-y-1">
-                                        <div className="flex justify-between text-sm">
-                                            <span className="">LP Tokens</span>
-                                            <span className="text-primary">~{addAmount ? (parseFloat(addAmount) * 0.85).toFixed(1) : '0.0'}</span>
-                                        </div>
-                                        <div className="flex justify-between text-sm">
-                                            <span className="">Pool Share</span>
-                                            <span className="text-blue">{addAmount ? (parseFloat(addAmount) * 0.01).toFixed(2) : '0.00'}%</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {addAmount && parseFloat(addAmount) > 0 && (
-                                    <Button
-                                        variant={'ghost'}
-                                        className="w-full"
-                                        onClick={() => setShowSimulation((prev) => !prev)}
-                                    >
-                                        {showSimulation ? 'Hide' : 'Simulate Strategy'} ↗
-                                    </Button>
-                                )}
-
-                                {showSimulation && addAmount && parseFloat(addAmount) > 0 && (
-                                    <div className="-dark p-3 space-y-2">
-                                        <p className="text-purple text-xs font-medium mb-2">Strategy Simulation</p>
-                                        <div className="space-y-1 text-xs">
-                                            <div className="flex justify-between">
-                                                <span className="">Projected APY</span>
-                                                <span className="text-blue">{currentPool.apy}</span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                                <span className="">IL Risk (30d)</span>
-                                                <span className="text-yellow-400">2.3%</span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                                <span className="">Expected Return (30d)</span>
-                                                <span className="text-blue">+${(parseFloat(addAmount) * 0.02).toFixed(0)}</span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                                <span className="">Max Drawdown</span>
-                                                <span className="text-red-400">-5.1%</span>
-                                            </div>
-                                        </div>
                                     </div>
                                 )}
 
-                                <Button className="w-full">
-                                    <PlusCircle size={16} className="mr-2" />
-                                    Launch Liquidity
-                                </Button>
-                            </div>
-                        )}
+                                {/* Remove Liquidity Form */}
+                                {manageSubTab === 'remove' && (
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="block  text-sm font-medium mb-2">
+                                                LP Tokens
+                                            </label>
+                                            <div className="flex">
+                                                <Input
+                                                    type="number"
+                                                    value={removeAmount}
+                                                    onChange={(e) => setRemoveAmount(e.target.value)}
+                                                    placeholder="0.00"
+                                                />
+                                                <Button className="">
+                                                    MAX
+                                                </Button>
+                                            </div>
+                                        </div>
 
-                        {/* Remove Liquidity Form */}
-                        {manageSubTab === 'remove' && (
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="block  text-sm font-medium mb-2">
-                                        LP Tokens
-                                    </label>
-                                    <div className="flex">
-                                        <Input
-                                            type="number"
-                                            value={removeAmount}
-                                            onChange={(e) => setRemoveAmount(e.target.value)}
-                                            placeholder="0.00"
-                                        />
-                                        <Button className="">
-                                            MAX
+                                        <div className="-dark p-3">
+                                            <p className="text-purple text-xs mb-2 font-medium">You will receive</p>
+                                            <div className="space-y-1">
+                                                <div className="flex justify-between text-sm">
+                                                    <span className="">{selectedPool.split('/')[0]}</span>
+                                                    <span className="text-primary">{removeAmount ? (parseFloat(removeAmount) * 0.5 * 0.025).toFixed(4) : '0.0000'}</span>
+                                                </div>
+                                                <div className="flex justify-between text-sm">
+                                                    <span className="">{selectedPool.split('/')[1]}</span>
+                                                    <span className="text-primary">{removeAmount ? (parseFloat(removeAmount) * 0.5 * 52).toFixed(2) : '0.00'}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <Button variant="secondary" className="w-full">
+                                            <MinusCircle size={16} className="mr-2" />
+                                            Extract Resources
                                         </Button>
                                     </div>
-                                </div>
+                                )}
 
-                                <div className="-dark p-3">
-                                    <p className="text-purple text-xs mb-2 font-medium">You will receive</p>
-                                    <div className="space-y-1">
-                                        <div className="flex justify-between text-sm">
-                                            <span className="">{selectedPool.split('/')[0]}</span>
-                                            <span className="text-primary">{removeAmount ? (parseFloat(removeAmount) * 0.5 * 0.025).toFixed(4) : '0.0000'}</span>
+                                {/* Pool Info */}
+                                <div className="mt-6 pt-4 cosmic-border">
+                                    <h3 className=" font-medium mb-3 text-sm">Pool Info</h3>
+                                    <div className="space-y-2 text-xs">
+                                        <div className="flex justify-between">
+                                            <span className="">Fee</span>
+                                            <span className="text-blue">{currentPool.fee}</span>
                                         </div>
-                                        <div className="flex justify-between text-sm">
-                                            <span className="">{selectedPool.split('/')[1]}</span>
-                                            <span className="text-primary">{removeAmount ? (parseFloat(removeAmount) * 0.5 * 52).toFixed(2) : '0.00'}</span>
+                                        <div className="flex justify-between">
+                                            <span className="">Network</span>
+                                            <span className="text-blue">Ethereum</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="">Status</span>
+                                            <span className="text-purple">Active</span>
                                         </div>
                                     </div>
                                 </div>
-
-                                <Button variant="secondary" className="w-full">
-                                    <MinusCircle size={16} className="mr-2" />
-                                    Extract Resources
-                                </Button>
-                            </div>
+                            </>
                         )}
-
-                        {/* Pool Info */}
-                        <div className="mt-6 pt-4 cosmic-border">
-                            <h3 className=" font-medium mb-3 text-sm">Pool Info</h3>
-                            <div className="space-y-2 text-xs">
-                                <div className="flex justify-between">
-                                    <span className="">Fee</span>
-                                    <span className="text-blue">{currentPool.fee}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="">Network</span>
-                                    <span className="text-blue">Ethereum</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="">Status</span>
-                                    <span className="text-purple">Active</span>
-                                </div>
-                            </div>
-                        </div>
                     </TabsContent>
 
                     {/* PROFILE TAB CONTENT */}
