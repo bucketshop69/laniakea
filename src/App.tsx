@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { Rocket, Star } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import Stats from './components/Stats';
 import ActionPanel from './components/ActionPanel';
 
@@ -83,6 +82,7 @@ const SpaceLiquidityPool = () => {
   // Debug chart data
   console.log('Chart data:', chartData);
   console.log('Current pool:', currentPool);
+  console.log('Stars generated:', stars.length);
 
   // Generate random stars for background
   useEffect(() => {
@@ -106,7 +106,6 @@ const SpaceLiquidityPool = () => {
   return (
     <div className="w-screen min-h-screen grid place-items-center">
       <div className="grid grid-cols-12 gap-1 max-w-7xl w-full h-[600px]">
-        {/* <div className="col-span-1"></div> */}
         <Stats
           selectedPool={selectedPool}
           currentPool={currentPool}
@@ -119,7 +118,6 @@ const SpaceLiquidityPool = () => {
           positions={positions}
           newsItems={newsItems}
         />
-        {/* <div className="col-span-1"></div> */}
       </div>
     </div>
   );

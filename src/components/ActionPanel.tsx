@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
+import DappSelector, { type DappOption } from './DappSelector';
 
 interface Pool {
     pair: string;
@@ -71,19 +72,34 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
     const [addAmount, setAddAmount] = useState('');
     const [removeAmount, setRemoveAmount] = useState('');
     const [showSimulation, setShowSimulation] = useState(false);
+    const dapps: DappOption[] = [
+        { id: 'saros', name: 'Saros', iconSrc: '/saros/SAROS_Mark_Purple.png' },
+        { id: 'meteora', name: 'Meteora', iconSrc: '/meteora/meteora.png' }
+    ];
+    const [selectedDapp, setSelectedDapp] = useState(dapps[0].id);
 
     const currentPool = pools.find(p => p.pair === selectedPool) || pools[0];
+    const handleDappSelection = (id: string) => {
+        setSelectedDapp(id);
+        setMainTab('manage');
+    };
     return (
         <div className="col-start-8 col-span-4 w-full">
             <Card className="flex flex-col">
+                <DappSelector dapps={dapps} selectedId={selectedDapp} onSelect={handleDappSelection} />
                 <Tabs value={mainTab} onValueChange={setMainTab} className="flex flex-col h-full">
-                    <TabsList className="flex mb-6  rounded-lg p-1 h-auto">
-                        <TabsTrigger value="manage" className="flex-1 data-[state=active]:bg-transparent data-[state=active]:text-primary"><Settings size={16} className="mr-1" />Manage</TabsTrigger>
-                        <TabsTrigger value="profile" className="flex-1 data-[state=active]:bg-transparent data-[state=active]:text-primary"><User size={16} className="mr-1" />Profile</TabsTrigger>
+                    <TabsList className="flex mb-6 mx-4 mt-2 rounded-lg p-1 h-auto">
+                        <TabsTrigger value="manage"
+                            className="flex-1 data-[state=active]:bg-transparent data-[state=active]:text-primary">
+                            <Settings size={16} className="mr-1" />Manage
+                        </TabsTrigger>
+                        <TabsTrigger value="profile"
+                            className="flex-1 data-[state=active]:bg-transparent data-[state=active]:text-primary">
+                            <User size={16} className="mr-1" />Profile</TabsTrigger>
                         <TabsTrigger value="feed" className="flex-1 data-[state=active]:bg-transparent data-[state=active]:text-primary"><Rss size={16} className="mr-1" />Feed</TabsTrigger>
                     </TabsList>
 
-                    <TabsContent value="manage" className="flex-1">
+                    <TabsContent value="manage" className="flex-1 px-4">
                         {/* Pool Selector */}
                         <div className="mb-4">
                             <label className="block  text-sm font-medium mb-2">
@@ -172,7 +188,11 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
                                 </div>
 
                                 {addAmount && parseFloat(addAmount) > 0 && (
-                                    <Button variant={'ghost'} className="w-full">
+                                    <Button
+                                        variant={'ghost'}
+                                        className="w-full"
+                                        onClick={() => setShowSimulation((prev) => !prev)}
+                                    >
                                         {showSimulation ? 'Hide' : 'Simulate Strategy'} ↗
                                     </Button>
                                 )}
@@ -270,7 +290,7 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
                     </TabsContent>
 
                     {/* PROFILE TAB CONTENT */}
-                    <TabsContent value="profile" className="flex-1 space-y-4">
+                    <TabsContent value="profile" className="flex-1 space-y-4 px-4">
                         {/* Portfolio Overview */}
                         <div className="-dark p-4">
                             <h3 className="text-primary font-medium mb-3">Portfolio Overview</h3>
@@ -343,7 +363,7 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
                     </TabsContent>
 
                     {/* FEED TAB CONTENT */}
-                    <TabsContent value="feed" className="flex-1 space-y-4">
+                    <TabsContent value="feed" className="flex-1 space-y-4 px-4">
                         <h3 className=" font-medium mb-3 text-sm">Market Feed</h3>
                         <div className="space-y-3 max-h-96 overflow-y-auto">
                             {newsItems.map((item, index) => (
