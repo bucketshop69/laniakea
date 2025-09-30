@@ -11,6 +11,10 @@ import {
 } from '@/components/ui/table'
 import { useDappStore, type SarosPoolOverview } from '@/store/dappStore'
 
+interface SarosDiscoverProps {
+  onSelect?: (pool: SarosPoolOverview) => void
+}
+
 const formatNumber = (value: number) => {
   if (!Number.isFinite(value)) return '—'
   if (value >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(1)}B`
@@ -19,7 +23,7 @@ const formatNumber = (value: number) => {
   return value.toFixed(2)
 }
 
-const SarosDiscover = () => {
+const SarosDiscover = ({ onSelect }: SarosDiscoverProps) => {
   const [keyword, setKeyword] = useState('')
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const saros = useDappStore((state) => state.saros)
@@ -124,6 +128,7 @@ const SarosDiscover = () => {
                       if (multiplePairs) {
                         toggleExpand(pool)
                       }
+                      onSelect?.(pool)
                     }}
                   >
                     <TableCell>

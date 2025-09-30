@@ -43,6 +43,7 @@ export interface SarosPoolOverview {
 interface SarosDataState {
   pools: SarosPoolOverview[];
   isLoading: boolean;
+  selectedPool: SarosPoolOverview | null;
   error?: string;
   lastFetched?: number;
   lastQuery?: string;
@@ -52,6 +53,7 @@ interface DappStoreState {
   selectedDapp: SupportedDapp;
   saros: SarosDataState;
   setSelectedDapp: (dapp: SupportedDapp) => void;
+  setSelectedSarosPool: (pool: SarosPoolOverview | null) => void;
   fetchSarosData: (options?: { force?: boolean; endpointOverride?: string }) => Promise<void>;
 }
 
@@ -60,12 +62,21 @@ export const useDappStore = create<DappStoreState>((set, get) => ({
   saros: {
     pools: [],
     isLoading: false,
+    selectedPool: null,
   },
   setSelectedDapp: (dapp) => {
     set({ selectedDapp: dapp });
     if (dapp === 'saros') {
       void get().fetchSarosData({ force: true });
     }
+  },
+  setSelectedSarosPool: (pool) => {
+    set((state) => ({
+      saros: {
+        ...state.saros,
+        selectedPool: pool,
+      },
+    }));
   },
   fetchSarosData: async ({ force, endpointOverride } = {}) => {
     const { saros } = get();
@@ -143,10 +154,20 @@ export const useDappStore = create<DappStoreState>((set, get) => ({
             : [],
         }));
 
+      const matchedSelection = saros.selectedPool
+        ? rawPools.find((pool) =>
+          pool.tokenX.mintAddress === saros.selectedPool?.tokenX.mintAddress &&
+          pool.tokenY.mintAddress === saros.selectedPool?.tokenY.mintAddress
+        ) ?? null
+        : null;
+
       set({
         saros: {
+          ...saros,
           pools: rawPools,
           isLoading: false,
+          error: undefined,
+          selectedPool: matchedSelection,
           lastFetched: Date.now(),
           lastQuery: query,
         },
@@ -156,8 +177,10 @@ export const useDappStore = create<DappStoreState>((set, get) => ({
       console.warn('Saros data fetch failed. Verify connectivity to Saros public API.', error);
       set({
         saros: {
+          ...saros,
           pools: [],
           isLoading: false,
+          selectedPool: null,
           error: message,
           lastFetched: Date.now(),
           lastQuery: query,

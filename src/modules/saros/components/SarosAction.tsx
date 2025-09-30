@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react';
 import { Plus, Search, Droplets } from 'lucide-react';
 import { Card } from '@/components/ui/card';
+import { useDappStore, type SarosPoolOverview } from '@/store/dappStore';
 import SarosActionRail, { type SarosActionDefinition } from './SarosActionRail';
 import SarosDiscover from './SarosDiscover';
+import SarosManage from './SarosManage';
 
 const CreatePlaceholder = () => (
     <Card className="h-full rounded-2xl p-1">
@@ -15,21 +17,11 @@ const CreatePlaceholder = () => (
     </Card>
 );
 
-const ManagePlaceholder = () => (
-    <Card className="h-full rounded-2xl p-1">
-        <div className="space-y-1">
-            <h2 className="text-lg font-semibold text-primary">Manage Liquidity</h2>
-            <p className="text-sm text-muted-foreground">
-                Add, remove, or claim rewards from your Saros pools. (Controls coming soon.)
-            </p>
-        </div>
-    </Card>
-);
-
 type SarosActionId = 'discover' | 'create' | 'manage';
 
 const SarosAction = () => {
     const [activeAction, setActiveAction] = useState<SarosActionId>('discover');
+    const setSelectedSarosPool = useDappStore((state) => state.setSelectedSarosPool);
 
     const actions = useMemo<SarosActionDefinition<SarosActionId>[]>(
         () => [
@@ -40,17 +32,27 @@ const SarosAction = () => {
         []
     );
 
+    const handlePoolSelect = (pool: SarosPoolOverview) => {
+        setSelectedSarosPool(pool);
+        setActiveAction('manage');
+    };
+
+    const handleBackToDiscover = () => {
+        setSelectedSarosPool(null);
+        setActiveAction('discover');
+    };
+
     const renderContent = () => {
         switch (activeAction) {
             case 'create':
                 return <CreatePlaceholder />;
             case 'manage':
-                return <ManagePlaceholder />;
+                return <SarosManage onBack={handleBackToDiscover} />;
             case 'discover':
             default:
                 return (
                     <Card className="h-full rounded-2xl p-1">
-                        <SarosDiscover />
+                        <SarosDiscover onSelect={handlePoolSelect} />
                     </Card>
                 );
         }
