@@ -1,34 +1,28 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { LiquidityBookServices, MODE } from '@saros-finance/dlmm-sdk'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { PoolMetadata } from '@saros-finance/dlmm-sdk/types/config'
-import type { GetTokenOutputResponse } from '@saros-finance/dlmm-sdk/types/services'
+import { fetchSarosPoolMetadata } from '../services/poolService'
 
 type FetchState = {
   metadata: PoolMetadata | null
-  quote: GetTokenOutputResponse | null
   price: string | null
+  baseAmount: number | null
+  quoteAmount: number | null
+  totalValueQuote: number | null
   isLoading: boolean
   error: string | null
 }
 
-let cachedService: LiquidityBookServices | null = null
-
-const getService = () => {
-  if (!cachedService) {
-    const SOLANA_RPC_ENDPOINT = "https://mainnet.helius-rpc.com/?api-key=dbf616dd-1870-4cdb-a0d2-754ae58a64f0"
-    cachedService = new LiquidityBookServices({
-      mode: MODE.MAINNET,
-      options: { rpcUrl: SOLANA_RPC_ENDPOINT }
-    })
-  }
-  return cachedService
-}
-
 export const useFetchPoolMetadata = (poolAddress?: string) => {
-  const [state, setState] = useState<FetchState>({ metadata: null, quote: null, price: null, isLoading: false, error: null })
+  const [state, setState] = useState<FetchState>({
+    metadata: null,
+    price: null,
+    baseAmount: null,
+    quoteAmount: null,
+    totalValueQuote: null,
+    isLoading: false,
+    error: null,
+  })
   const mountedRef = useRef(true)
-
-  const service = useMemo(() => getService(), [])
 
   const fetchMetadata = useCallback(
     async (address?: string) => {
@@ -37,7 +31,15 @@ export const useFetchPoolMetadata = (poolAddress?: string) => {
         if (!mountedRef.current) {
           return null
         }
-        setState({ metadata: null, quote: null, price: null, isLoading: false, error: null })
+        setState({
+          metadata: null,
+          price: null,
+          baseAmount: null,
+          quoteAmount: null,
+          totalValueQuote: null,
+          isLoading: false,
+          error: null,
+        })
         return null
       }
 
@@ -46,50 +48,59 @@ export const useFetchPoolMetadata = (poolAddress?: string) => {
       }
 
       try {
-        const response = await service.fetchPoolMetadata(target)
-        let quote: GetTokenOutputResponse | null = null
+        const response = await fetchSarosPoolMetadata(target)
         let price: string | null = null
-        let errorMessage: string | null = null
 
-        try {
-          const amount = Math.pow(10, response.extra.tokenBaseDecimal)
-          quote = await service.quote({
-            amount,
-            metadata: response,
-            optional: {
-              isExactInput: true,
-              swapForY: true,
-              slippage: 0,
-            },
-          })
-
-          const amountOut = Number(quote.amountOut)
-          const denominator = Math.pow(10, response.extra.tokenQuoteDecimal)
-          price = (amountOut / denominator).toString()
-        } catch (quoteError) {
-          errorMessage = quoteError instanceof Error ? quoteError.message : 'Failed to compute quote'
-          console.warn('Failed to compute Saros quote', quoteError)
+        const baseAmountValue = Number(response.baseReserve) / Math.pow(10, response.extra.tokenBaseDecimal)
+        const quoteAmountValue = Number(response.quoteReserve) / Math.pow(10, response.extra.tokenQuoteDecimal)
+        if (Number.isFinite(baseAmountValue) && baseAmountValue > 0) {
+          price = (quoteAmountValue / baseAmountValue).toString()
         }
+        const totalValueQuote = price ? baseAmountValue * Number(price) + quoteAmountValue : null
 
         if (mountedRef.current) {
-          setState({ metadata: response, quote, price, isLoading: false, error: errorMessage })
+          setState({
+            metadata: response,
+            price,
+            baseAmount: baseAmountValue,
+            quoteAmount: quoteAmountValue,
+            totalValueQuote,
+            isLoading: false,
+            error: null,
+          })
         }
         return response
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Failed to load pool metadata'
         if (mountedRef.current) {
-          setState({ metadata: null, quote: null, price: null, isLoading: false, error: message })
+          setState({
+            metadata: null,
+            price: null,
+            baseAmount: null,
+            quoteAmount: null,
+            totalValueQuote: null,
+            isLoading: false,
+            error: message,
+          })
         }
         return null
       }
     },
-    [poolAddress, service]
+    [poolAddress]
   )
 
   useEffect(() => {
     mountedRef.current = true
     if (!poolAddress) {
-      setState({ metadata: null, quote: null, price: null, isLoading: false, error: null })
+      setState({
+        metadata: null,
+        price: null,
+        baseAmount: null,
+        quoteAmount: null,
+        totalValueQuote: null,
+        isLoading: false,
+        error: null,
+      })
     } else {
       void fetchMetadata(poolAddress)
     }
@@ -101,8 +112,10 @@ export const useFetchPoolMetadata = (poolAddress?: string) => {
 
   return {
     metadata: state.metadata,
-    quote: state.quote,
     price: state.price,
+    baseAmount: state.baseAmount,
+    quoteAmount: state.quoteAmount,
+    totalValueQuote: state.totalValueQuote,
     isLoading: state.isLoading,
     error: state.error,
     refetch: fetchMetadata,

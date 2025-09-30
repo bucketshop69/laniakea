@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ArrowLeft, MinusCircle, PlusCircle } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -18,14 +18,37 @@ const SarosManage = ({ onBack }: SarosManageProps) => {
   const pool = useDappStore((state) => state.saros.selectedPool)
   const [tab, setTab] = useState<ManageTab>('add')
   const [activeShape, setActiveShape] = useState<LiquidityShape>(LiquidityShape.Spot)
-  const [baseAmount, setBaseAmount] = useState('')
-  const [quoteAmount, setQuoteAmount] = useState('')
+  const [baseAmountInput, setBaseAmountInput] = useState('')
+  const [quoteAmountInput, setQuoteAmountInput] = useState('')
   const [minPrice, setMinPrice] = useState('')
   const [maxPrice, setMaxPrice] = useState('')
   const [bins, setBins] = useState('5')
 
   const poolAddress = pool?.pairs[0]?.pair
-  const { metadata, price, isLoading, error } = useFetchPoolMetadata(poolAddress)
+  const {
+    metadata,
+    price,
+    baseAmount,
+    quoteAmount,
+    totalValueQuote,
+    isLoading,
+    error,
+  } = useFetchPoolMetadata(poolAddress)
+
+  useEffect(() => {
+    if (!metadata || !pool || baseAmount == null || quoteAmount == null) {
+      return
+    }
+
+    console.log('[Saros SDK] Normalized reserves', {
+      baseToken: pool.tokenX.symbol,
+      baseAmount,
+      quoteToken: pool.tokenY.symbol,
+      quoteAmount,
+      totalValueQuote,
+      rawMetadata: metadata,
+    })
+  }, [metadata, pool, baseAmount, quoteAmount, totalValueQuote])
 
   if (!pool) {
     return (
@@ -118,8 +141,8 @@ const SarosManage = ({ onBack }: SarosManageProps) => {
                     {pool.tokenX.symbol} Amount
                   </label>
                   <Input
-                    value={baseAmount}
-                    onChange={(event) => setBaseAmount(event.target.value)}
+                    value={baseAmountInput}
+                    onChange={(event) => setBaseAmountInput(event.target.value)}
                     placeholder="0.00"
                     inputMode="decimal"
                   />
@@ -129,8 +152,8 @@ const SarosManage = ({ onBack }: SarosManageProps) => {
                     {pool.tokenY.symbol} Amount
                   </label>
                   <Input
-                    value={quoteAmount}
-                    onChange={(event) => setQuoteAmount(event.target.value)}
+                    value={quoteAmountInput}
+                    onChange={(event) => setQuoteAmountInput(event.target.value)}
                     placeholder="0.00"
                     inputMode="decimal"
                   />
