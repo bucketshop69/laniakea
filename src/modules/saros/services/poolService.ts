@@ -2,6 +2,7 @@ import { PublicKey } from '@solana/web3.js'
 import type { PoolMetadata } from '@saros-finance/dlmm-sdk/types/config'
 import type {
   AddLiquidityIntoPositionParams,
+  CreatePositionParams as SDKCreatePositionParams,
   GetBinArrayParams,
   GetBinsArrayInfoParams,
   GetBinsReserveParams,
@@ -309,4 +310,9 @@ export const createSarosPool = async (params: CreatePoolParams) => {
     binStep: params.binStep,
     payer: params.payer,
   })
+}
+
+export const createSarosPosition = async (params: SDKCreatePositionParams) => {
+  const service = getLiquidityBookService()
+  return service.createPosition(params)
 }

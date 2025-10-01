@@ -5,17 +5,7 @@ import { useDappStore, type SarosPoolOverview } from '@/store/dappStore';
 import SarosActionRail, { type SarosActionDefinition } from './SarosActionRail';
 import SarosDiscover from './SarosDiscover';
 import SarosManage from './SarosManage';
-
-const CreatePlaceholder = () => (
-    <Card className="h-full rounded-2xl p-1">
-        <div className="space-y-1">
-            <h2 className="text-lg font-semibold text-primary">Create Pool</h2>
-            <p className="text-sm text-muted-foreground">
-                Configure DLMM pool parameters and launch liquidity. (Form coming soon.)
-            </p>
-        </div>
-    </Card>
-);
+import SarosCreatePool from './SarosCreatePool';
 
 type SarosActionId = 'discover' | 'create' | 'manage';
 
@@ -45,7 +35,11 @@ const SarosAction = () => {
     const renderContent = () => {
         switch (activeAction) {
             case 'create':
-                return <CreatePlaceholder />;
+                return (
+                    <Card className="h-full rounded-2xl p-1 overflow-y-auto">
+                        <SarosCreatePool />
+                    </Card>
+                );
             case 'manage':
                 return <SarosManage onBack={handleBackToDiscover} />;
             case 'discover':

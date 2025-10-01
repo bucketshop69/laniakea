@@ -42,10 +42,6 @@ const SpaceLiquidityPool = () => {
     { pair: 'ETH/USDC', amount: '$8,450', pnl: '+$745', apy: '24.5%', entryDate: '2024-08-15' },
     { pair: 'BTC/USDT', amount: '$6,200', pnl: '+$420', apy: '18.2%', entryDate: '2024-08-20' },
     { pair: 'LINK/ETH', amount: '$4,150', pnl: '+$680', apy: '32.4%', entryDate: '2024-08-25' },
-    { pair: 'ETH/BTC', amount: '$3,850', pnl: '+$215', apy: '15.7%', entryDate: '2024-09-01' },
-    { pair: 'USDC/USDT', amount: '$2,200', pnl: '+$85', apy: '8.1%', entryDate: '2024-09-05' },
-    { pair: 'SOL/USDC', amount: '$1,850', pnl: '-$125', apy: '28.9%', entryDate: '2024-09-10' },
-    { pair: 'AVAX/ETH', amount: '$1,350', pnl: '+$180', apy: '19.8%', entryDate: '2024-09-12' }
   ];
 
   // News feed data

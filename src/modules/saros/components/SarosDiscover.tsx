@@ -127,6 +127,7 @@ const SarosDiscover = ({ onSelect }: SarosDiscoverProps) => {
                     onClick={() => {
                       if (multiplePairs) {
                         toggleExpand(pool)
+                        return
                       }
                       onSelect?.(pool)
                     }}
@@ -152,7 +153,13 @@ const SarosDiscover = ({ onSelect }: SarosDiscoverProps) => {
                   </TableRow>
 
                   {multiplePairs && isExpanded && pool.pairs.map((pair) => (
-                    <TableRow key={pair.pair} className="bg-muted/10">
+                    <TableRow
+                      key={pair.pair}
+                      className="bg-muted/10 cursor-pointer"
+                      onClick={() => {
+                        onSelect?.(pool)
+                      }}
+                    >
                       <TableCell>
                         <div className="ml-1 border-l border-muted-foreground/30 pl-1">
                           <div className="flex items-center gap-1">

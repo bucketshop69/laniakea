@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/u
 import DappSelector, { type DappOption } from './DappSelector';
 import SarosAction from '@/modules/saros/components/SarosAction';
 import { useDappStore, type SupportedDapp } from '@/store/dappStore';
+import { WalletButton } from './WalletButton';
 
 interface Pool {
     pair: string;
@@ -80,7 +81,7 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
 
     const dapps: DappOption[] = [
         { id: 'saros', name: 'Saros', iconSrc: '/saros/SAROS_Mark_Purple.png' },
-        { id: 'meteora', name: 'Meteora', iconSrc: '/meteora/meteora.png' }
+        // { id: 'meteora', name: 'Meteora', iconSrc: '/meteora/meteora.png' }
     ];
 
     const currentPool = pools.find(p => p.pair === selectedPool) || pools[0];
@@ -97,7 +98,14 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
     return (
         <div className="col-start-8 col-span-5 w-full min-h-[600px]">
             <Card className="flex flex-col h-full">
-                <DappSelector dapps={dapps} selectedId={selectedDapp} onSelect={handleDappSelection} />
+                <div className="grid grid-cols-12 gap-1 p-1">
+                    <div className="col-span-10">
+                        <DappSelector dapps={dapps} selectedId={selectedDapp} onSelect={handleDappSelection} />
+                    </div>
+                    <div className="col-span-2 flex items-center justify-center">
+                        <WalletButton />
+                    </div>
+                </div>
                 <Tabs value={mainTab} onValueChange={setMainTab} className="flex flex-col h-full">
                     <TabsList className="flex mb-1 mx-1 mt-1 rounded-lg p-1 h-auto">
                         <TabsTrigger value="manage"
@@ -188,7 +196,7 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
                                             </div>
                                         </div>
 
-                                        <div className="bg-card p-3">
+                                        <div className="bg-card p-1">
                                             <p className=" text-xs mb-2">You will receive</p>
                                             <div className="space-y-1">
                                                 <div className="flex justify-between text-sm">
@@ -213,7 +221,7 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
                                         )}
 
                                         {showSimulation && addAmount && parseFloat(addAmount) > 0 && (
-                                            <div className="-dark p-3 space-y-2">
+                                            <div className="-dark p-1 space-y-2">
                                                 <p className="text-purple text-xs font-medium mb-2">Strategy Simulation</p>
                                                 <div className="space-y-1 text-xs">
                                                     <div className="flex justify-between">
@@ -263,7 +271,7 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
                                             </div>
                                         </div>
 
-                                        <div className="-dark p-3">
+                                        <div className="-dark p-1">
                                             <p className="text-purple text-xs mb-2 font-medium">You will receive</p>
                                             <div className="space-y-1">
                                                 <div className="flex justify-between text-sm">
@@ -309,69 +317,69 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
                     {/* PROFILE TAB CONTENT */}
                     <TabsContent value="profile" className="flex-1 space-y-4 px-4">
                         {/* Portfolio Overview */}
-                        <div className="-dark p-4">
-                            <h3 className="text-primary font-medium mb-3">Portfolio Overview</h3>
+                        <div className="-dark p-1 opacity-50">
+                            <h3 className="text-muted-foreground font-medium mb-3">Portfolio Overview</h3>
                             <div className="grid grid-cols-2 gap-3 mb-4">
                                 <div>
-                                    <p className=" text-xs">Total Value</p>
-                                    <p className="text-lg font-bold text-primary">{portfolioData.totalValue}</p>
+                                    <p className="text-muted-foreground text-xs">Total Value</p>
+                                    <p className="text-lg font-bold text-muted-foreground">{portfolioData.totalValue}</p>
                                 </div>
                                 <div>
-                                    <p className=" text-xs">Total PnL</p>
-                                    <p className="text-lg font-bold text-blue">{portfolioData.totalPnL}</p>
+                                    <p className="text-muted-foreground text-xs">Total PnL</p>
+                                    <p className="text-lg font-bold text-muted-foreground">{portfolioData.totalPnL}</p>
                                 </div>
                                 <div>
-                                    <p className=" text-xs">Active Positions</p>
-                                    <p className="text-lg font-bold text-purple">{portfolioData.activePositions}</p>
+                                    <p className="text-muted-foreground text-xs">Active Positions</p>
+                                    <p className="text-lg font-bold text-muted-foreground">{portfolioData.activePositions}</p>
                                 </div>
                                 <div>
-                                    <p className=" text-xs">Avg APY</p>
-                                    <p className="text-lg font-bold text-blue">{portfolioData.averageAPY}</p>
+                                    <p className="text-muted-foreground text-xs">Avg APY</p>
+                                    <p className="text-lg font-bold text-muted-foreground">{portfolioData.averageAPY}</p>
                                 </div>
                             </div>
 
                             {/* Performance Metrics */}
                             <div className="grid grid-cols-2 gap-2 text-xs cosmic-border pt-3">
                                 <div className="flex justify-between">
-                                    <span className="">7d Return</span>
-                                    <span className="text-blue">{portfolioData.performance.return7d}</span>
+                                    <span className="text-muted-foreground">7d Return</span>
+                                    <span className="text-muted-foreground">{portfolioData.performance.return7d}</span>
                                 </div>
                                 <div className="flex justify-between">
-                                    <span className="">30d Return</span>
-                                    <span className="text-blue">{portfolioData.performance.return30d}</span>
+                                    <span className="text-muted-foreground">30d Return</span>
+                                    <span className="text-muted-foreground">{portfolioData.performance.return30d}</span>
                                 </div>
                                 <div className="flex justify-between">
-                                    <span className="">Max Drawdown</span>
-                                    <span className="text-red-400">{portfolioData.performance.maxDrawdown}</span>
+                                    <span className="text-muted-foreground">Max Drawdown</span>
+                                    <span className="text-muted-foreground">{portfolioData.performance.maxDrawdown}</span>
                                 </div>
                                 <div className="flex justify-between">
-                                    <span className="">Win Rate</span>
-                                    <span className="text-purple">{portfolioData.performance.winRate}</span>
+                                    <span className="text-muted-foreground">Win Rate</span>
+                                    <span className="text-muted-foreground">{portfolioData.performance.winRate}</span>
                                 </div>
                             </div>
                         </div>
 
                         {/* Active Positions */}
-                        <div>
-                            <h3 className=" font-medium mb-3 text-sm">Active Positions</h3>
+                        <div className="opacity-50">
+                            <h3 className="text-muted-foreground font-medium mb-3 text-sm">Active Positions</h3>
                             <div className="space-y-2 max-h-64 overflow-y-auto">
                                 {positions.map((position, index) => (
-                                    <div key={index} className="-dark p-3">
+                                    <div key={index} className="-dark p-1">
                                         <div className="flex justify-between items-start mb-2">
                                             <div>
-                                                <p className="text-primary font-medium text-sm">{position.pair}</p>
-                                                <p className=" text-xs">Entry: {position.entryDate}</p>
+                                                <p className="text-muted-foreground font-medium text-sm">{position.pair}</p>
+                                                <p className="text-muted-foreground text-xs">Entry: {position.entryDate}</p>
                                             </div>
                                             <div className="text-right">
-                                                <p className="text-primary text-sm">{position.amount}</p>
-                                                <p className={`text-xs ${position.pnl.startsWith('+') ? 'text-blue' : 'text-red-400'}`}>
+                                                <p className="text-muted-foreground text-sm">{position.amount}</p>
+                                                <p className="text-muted-foreground text-xs">
                                                     {position.pnl}
                                                 </p>
                                             </div>
                                         </div>
                                         <div className="flex justify-between text-xs">
-                                            <span className="">APY: {position.apy}</span>
-                                            <ArrowRight size={12} className="" />
+                                            <span className="text-muted-foreground">APY: {position.apy}</span>
+                                            <ArrowRight size={12} className="text-muted-foreground" />
                                         </div>
                                     </div>
                                 ))}
@@ -380,38 +388,36 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
                     </TabsContent>
 
                     {/* FEED TAB CONTENT */}
-                    <TabsContent value="feed" className="flex-1 space-y-4 px-4">
-                        <h3 className=" font-medium mb-3 text-sm">Market Feed</h3>
+                    <TabsContent value="feed" className="flex-1 space-y-4 px-4 opacity-50">
+                        <h3 className="text-muted-foreground font-medium mb-3 text-sm">Market Feed</h3>
                         <div className="space-y-3 max-h-96 overflow-y-auto">
                             {newsItems.map((item, index) => (
                                 <div key={item.id} className="relative">
                                     {/* Timeline line */}
                                     {index !== newsItems.length - 1 && (
-                                        <div className="absolute left-4 top-8 w-0.5 h-full bg-slate-700"></div>
+                                        <div className="absolute left-4 top-8 w-0.5 h-full bg-slate-700/50"></div>
                                     )}
 
                                     <div className={`flex ${index % 2 === 0 ? 'flex-row' : 'flex-row-reverse'}`}>
                                         {/* Timeline dot */}
-                                        <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${item.impact === 'bullish' ? 'bg-blue' :
-                                            item.impact === 'bearish' ? 'bg-red-500' : 'bg-purple'
-                                            }`}>
+                                        <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center bg-muted">
                                             {item.type === 'event' ?
-                                                <Calendar size={12} className="text-white" /> :
-                                                item.impact === 'bullish' ? <TrendingUp size={12} className="text-white" /> :
-                                                    item.impact === 'bearish' ? <TrendingDown size={12} className="text-white" /> :
-                                                        <Rss size={12} className="text-white" />
+                                                <Calendar size={12} className="text-muted-foreground" /> :
+                                                item.impact === 'bullish' ? <TrendingUp size={12} className="text-muted-foreground" /> :
+                                                    item.impact === 'bearish' ? <TrendingDown size={12} className="text-muted-foreground" /> :
+                                                        <Rss size={12} className="text-muted-foreground" />
                                             }
                                         </div>
 
                                         {/* Content */}
-                                        <div className={`-dark p-3 flex-1 ${index % 2 === 0 ? 'ml-3' : 'mr-3'}`}>
+                                        <div className={`-dark p-1 flex-1 ${index % 2 === 0 ? 'ml-3' : 'mr-3'}`}>
                                             <div className="flex justify-between items-start mb-1">
-                                                <h4 className="text-primary text-sm font-medium">{item.title}</h4>
-                                                <span className=" text-xs">{item.time}</span>
+                                                <h4 className="text-muted-foreground text-sm font-medium">{item.title}</h4>
+                                                <span className="text-muted-foreground text-xs">{item.time}</span>
                                             </div>
-                                            <p className=" text-xs mb-2">{item.description}</p>
+                                            <p className="text-muted-foreground text-xs mb-2">{item.description}</p>
                                             {item.date && (
-                                                <p className="text-purple text-xs font-medium">{item.date}</p>
+                                                <p className="text-muted-foreground text-xs font-medium">{item.date}</p>
                                             )}
                                         </div>
                                     </div>
