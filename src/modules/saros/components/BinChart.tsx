@@ -11,8 +11,6 @@ import {
   Cell,
   Brush,
 } from 'recharts'
-import type { TooltipProps } from 'recharts'
-import type { NameType, ValueType } from 'recharts/types/component/DefaultTooltipContent'
 import type { SarosBinLiquidityPoint } from '../services/poolService'
 
 interface BinChartProps {
@@ -93,7 +91,7 @@ const BinChart = ({
     }
   }
 
-  const CustomTooltip = ({ active, payload }: TooltipProps<ValueType, NameType>) => {
+  const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: any[] }) => {
     if (!active || !payload || payload.length === 0) return null
 
     const data = payload[0]?.payload as ChartDataPoint | undefined
