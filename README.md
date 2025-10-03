@@ -10,6 +10,10 @@ Current solutions are either pure aggregators (no insights) or pure analytics (n
 
 The wedge is sophisticated DeFi users who are already using multiple protocols. Start with Meteora + Drift integration, expand to the full Solana DeFi stack, then become the operating system for multichain DeFi strategies.
 
+## Environment Configuration
+
+Copy `.env.example` to `.env` and set `VITE_SOLANA_RPC_ENDPOINT` to your preferred Solana RPC URL. A sample Helius endpoint is provided. The project relies on the [`dotenv`](https://www.npmjs.com/package/dotenv) package (already listed in `package.json`) for loading these variables during builds and local development.
+
 # Laniakea DApp Integration Architecture
 
 ## Overview

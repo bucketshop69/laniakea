@@ -1,6 +1,7 @@
 import { LiquidityBookServices, MODE, type ILiquidityBookConfig } from '@saros-finance/dlmm-sdk'
+import { getSolanaEndpoint } from '@/lib/solanaConnection'
 
-const DEFAULT_RPC_ENDPOINT = 'https://mainnet.helius-rpc.com/?api-key=dbf616dd-1870-4cdb-a0d2-754ae58a64f0'
+const DEFAULT_RPC_ENDPOINT = getSolanaEndpoint()
 
 const DEFAULT_CONFIG: ILiquidityBookConfig = {
   mode: MODE.MAINNET,

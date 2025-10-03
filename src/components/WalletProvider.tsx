@@ -7,7 +7,7 @@ import {
   TorusWalletAdapter,
   LedgerWalletAdapter,
 } from '@solana/wallet-adapter-wallets';
-import { clusterApiUrl } from '@solana/web3.js';
+import { getSolanaEndpoint } from '@/lib/solanaConnection';
 
 // Import wallet adapter CSS
 import '@solana/wallet-adapter-react-ui/styles.css';
@@ -19,7 +19,7 @@ interface WalletContextProviderProps {
 export const WalletContextProvider: FC<WalletContextProviderProps> = ({ children }) => {
   // Use mainnet-beta, devnet, or testnet
   const network = 'mainnet-beta';
-  const endpoint = useMemo(() => clusterApiUrl(network), [network]);
+  const endpoint = useMemo(() => getSolanaEndpoint(), [network]);
 
   // Configure supported wallets
   const wallets = useMemo(

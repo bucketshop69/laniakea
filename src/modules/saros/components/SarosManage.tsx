@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ArrowLeft, MinusCircle, PlusCircle, Loader2, AlertCircle } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -16,6 +16,8 @@ import { getIdFromPrice, getPriceFromId } from '@saros-finance/dlmm-sdk/utils/pr
 import { BIN_ARRAY_SIZE } from '@saros-finance/dlmm-sdk/constants'
 import { addLiquidityToSarosPosition, createSarosPosition, getSarosUserPositions, getSarosPairAccount } from '../services/poolService'
 import { getLiquidityBookService } from '../lib/liquidityBook'
+import { useWalletBalanceStore, type WalletTokenBalance } from '@/store/walletBalanceStore'
+import { getSolanaConnection } from '@/lib/solanaConnection'
 import BinChart from './BinChart'
 
 type ManageTab = 'add' | 'remove'
@@ -26,7 +28,10 @@ interface SarosManageProps {
 
 const SarosManage = ({ onBack }: SarosManageProps) => {
   const pool = useDappStore((state) => state.saros.selectedPool)
+  const baseMint = pool?.tokenX.mintAddress ?? ''
+  const quoteMint = pool?.tokenY.mintAddress ?? ''
   const { publicKey, connected } = useWallet()
+  const connection = useMemo(() => getSolanaConnection(), [])
   const { setVisible: setWalletModalVisible } = useWalletModal()
   const [tab, setTab] = useState<ManageTab>('add')
   const [activeShape, setActiveShape] = useState<LiquidityShape>(LiquidityShape.Spot)
@@ -37,6 +42,15 @@ const SarosManage = ({ onBack }: SarosManageProps) => {
   const [isAdding, setIsAdding] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const refreshBalances = useWalletBalanceStore((state) => state.refreshBalances)
+  const isBalanceLoading = useWalletBalanceStore((state) => state.isLoading)
+  const balancesError = useWalletBalanceStore((state) => state.error)
+  const baseTokenBalance = useWalletBalanceStore((state) => (
+    baseMint ? state.balancesByMint[baseMint] : undefined
+  ))
+  const quoteTokenBalance = useWalletBalanceStore((state) => (
+    quoteMint ? state.balancesByMint[quoteMint] : undefined
+  ))
 
   const poolAddress = pool?.pairs[0]?.pair
   const primaryPair = pool?.pairs[0]
@@ -63,6 +77,56 @@ const SarosManage = ({ onBack }: SarosManageProps) => {
   }, [primaryPair, pool])
 
   const { data: binDistribution, isLoading: binLoading } = useFetchBinDistribution(binDistributionParams)
+
+  useEffect(() => {
+    if (!connected || !publicKey || !pool) {
+      return
+    }
+
+    const mintAddresses = [baseMint, quoteMint].filter((mint): mint is string => Boolean(mint))
+    if (mintAddresses.length === 0) {
+      return
+    }
+
+    void refreshBalances(connection, publicKey, mintAddresses, { force: true })
+  }, [connected, publicKey, pool, baseMint, quoteMint, connection, refreshBalances])
+
+  const formatAvailable = useCallback((balance?: WalletTokenBalance) => {
+    if (!balance) {
+      return '0'
+    }
+
+    const amount = balance.uiAmount
+    if (!Number.isFinite(amount) || Number.isNaN(amount)) {
+      return balance.uiAmountString
+    }
+
+    if (amount === 0) {
+      return '0'
+    }
+
+    if (amount >= 1) {
+      return amount.toLocaleString(undefined, { maximumFractionDigits: 4 })
+    }
+
+    return amount.toLocaleString(undefined, { maximumSignificantDigits: 4 })
+  }, [])
+
+  const renderBalanceLabel = useCallback((balance: WalletTokenBalance | undefined, symbol: string) => {
+    if (!connected) {
+      return 'Connect wallet to view balance'
+    }
+
+    if (isBalanceLoading) {
+      return 'Fetching balance…'
+    }
+
+    if (balancesError) {
+      return 'Balance unavailable'
+    }
+
+    return `Available: ${formatAvailable(balance)} ${symbol}`
+  }, [balancesError, connected, formatAvailable, isBalanceLoading])
 
   useEffect(() => {
     if (binDistribution.length > 0 && minBinId === null && maxBinId === null && primaryPair) {
@@ -439,20 +503,30 @@ const SarosManage = ({ onBack }: SarosManageProps) => {
             <div className="flex h-full flex-col gap-2 rounded-xl border border-border/40 p-2 text-xs">
               {/* Token Amounts - Compact Side by Side */}
               <div className="grid grid-cols-2 gap-2">
-                <Input
-                  value={baseAmountInput}
-                  onChange={(e) => setBaseAmountInput(e.target.value)}
-                  placeholder={`${pool.tokenX.symbol} 0.00`}
-                  inputMode="decimal"
-                  className="h-8 text-xs"
-                />
-                <Input
-                  value={quoteAmountInput}
-                  onChange={(e) => setQuoteAmountInput(e.target.value)}
-                  placeholder={`${pool.tokenY.symbol} 0.00`}
-                  inputMode="decimal"
-                  className="h-8 text-xs"
-                />
+                <div className="flex flex-col gap-1">
+                  <Input
+                    value={baseAmountInput}
+                    onChange={(e) => setBaseAmountInput(e.target.value)}
+                    placeholder={`${pool.tokenX.symbol} 0.00`}
+                    inputMode="decimal"
+                    className="h-8 text-xs"
+                  />
+                  <span className="text-[10px] text-muted-foreground">
+                    {renderBalanceLabel(baseTokenBalance, pool.tokenX.symbol)}
+                  </span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <Input
+                    value={quoteAmountInput}
+                    onChange={(e) => setQuoteAmountInput(e.target.value)}
+                    placeholder={`${pool.tokenY.symbol} 0.00`}
+                    inputMode="decimal"
+                    className="h-8 text-xs"
+                  />
+                  <span className="text-[10px] text-muted-foreground">
+                    {renderBalanceLabel(quoteTokenBalance, pool.tokenY.symbol)}
+                  </span>
+                </div>
               </div>
 
               {/* Strategy Selector - Compact Row */}
