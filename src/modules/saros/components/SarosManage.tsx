@@ -7,14 +7,21 @@ import { cn } from '@/lib/utils'
 import { useDappStore } from '@/store/dappStore'
 import { useFetchPoolMetadata } from '../hooks/useFetchPoolMetadata'
 import { useFetchBinDistribution } from '../hooks/useFetchBinDistribution'
-import { LiquidityShape } from '@saros-finance/dlmm-sdk/types/services'
+import { LiquidityShape, RemoveLiquidityType } from '@saros-finance/dlmm-sdk/types/services'
 import { useWallet } from '@solana/wallet-adapter-react'
 import { useWalletModal } from '@solana/wallet-adapter-react-ui'
 import { PublicKey, Transaction, Keypair } from '@solana/web3.js'
 import { createUniformDistribution, getMaxBinArray } from '@saros-finance/dlmm-sdk/utils'
 import { getIdFromPrice, getPriceFromId } from '@saros-finance/dlmm-sdk/utils/price'
 import { BIN_ARRAY_SIZE } from '@saros-finance/dlmm-sdk/constants'
-import { addLiquidityToSarosPosition, createSarosPosition, getSarosUserPositions, getSarosPairAccount } from '../services/poolService'
+import {
+  addLiquidityToSarosPosition,
+  createSarosPosition,
+  getSarosUserPositions,
+  getSarosPairAccount,
+  getSarosBinsReserveInformation,
+  removeSarosLiquidity,
+} from '../services/poolService'
 import { getLiquidityBookService } from '../lib/liquidityBook'
 import { useWalletBalanceStore, type WalletTokenBalance } from '@/store/walletBalanceStore'
 import { getSolanaConnection } from '@/lib/solanaConnection'
@@ -30,7 +37,7 @@ const SarosManage = ({ onBack }: SarosManageProps) => {
   const pool = useDappStore((state) => state.saros.selectedPool)
   const baseMint = pool?.tokenX.mintAddress ?? ''
   const quoteMint = pool?.tokenY.mintAddress ?? ''
-  const { publicKey, connected } = useWallet()
+  const { publicKey, connected, signTransaction, signAllTransactions } = useWallet()
   const connection = useMemo(() => getSolanaConnection(), [])
   const { setVisible: setWalletModalVisible } = useWalletModal()
   const [tab, setTab] = useState<ManageTab>('add')
@@ -42,6 +49,23 @@ const SarosManage = ({ onBack }: SarosManageProps) => {
   const [isAdding, setIsAdding] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [removeError, setRemoveError] = useState<string | null>(null)
+  const [removeSuccess, setRemoveSuccess] = useState<string | null>(null)
+  const [removingMint, setRemovingMint] = useState<string | null>(null)
+  const [positionsLoading, setPositionsLoading] = useState(false)
+  const [positionsError, setPositionsError] = useState<string | null>(null)
+  type SarosPosition = {
+    positionMint: string
+    position: string
+    lowerBinId: number
+    upperBinId: number
+    totalBins: number
+    baseAmount: number
+    quoteAmount: number
+  }
+
+  const [positions, setPositions] = useState<SarosPosition[]>([])
+  const [positionsRefreshNonce, setPositionsRefreshNonce] = useState(0)
   const refreshBalances = useWalletBalanceStore((state) => state.refreshBalances)
   const isBalanceLoading = useWalletBalanceStore((state) => state.isLoading)
   const balancesError = useWalletBalanceStore((state) => state.error)
@@ -277,6 +301,159 @@ const SarosManage = ({ onBack }: SarosManageProps) => {
     return maxBinId - minBinId + 1
   }, [minBinId, maxBinId])
 
+  const sanitizedPrice = useMemo(() => {
+    if (price == null) return null
+    const priceNumber = Number(price)
+    return Number.isFinite(priceNumber) ? priceNumber : null
+  }, [price])
+
+  const formatTokenAmount = useCallback((amount: number) => {
+    if (!Number.isFinite(amount) || Number.isNaN(amount)) {
+      return '—'
+    }
+    if (amount === 0) {
+      return '0'
+    }
+    if (Math.abs(amount) >= 1) {
+      return amount.toLocaleString(undefined, { maximumFractionDigits: 4 })
+    }
+    return amount.toLocaleString(undefined, { maximumSignificantDigits: 4 })
+  }, [])
+
+  const formatInteger = useCallback((value: number) => {
+    if (!Number.isFinite(value) || Number.isNaN(value)) {
+      return '—'
+    }
+    return Math.trunc(value).toLocaleString()
+  }, [])
+
+  const formatValueAmount = useCallback((value: number | null) => {
+    if (value === null || !Number.isFinite(value) || Number.isNaN(value)) {
+      return '—'
+    }
+    return value.toLocaleString(undefined, { maximumFractionDigits: 2 })
+  }, [])
+
+  const toBigIntSafe = useCallback((value: unknown): bigint => {
+    if (typeof value === 'bigint') return value
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return BigInt(Math.floor(value))
+    }
+    if (typeof value === 'string') {
+      try {
+        return BigInt(value)
+      } catch {
+        return 0n
+      }
+    }
+    if (value && typeof value === 'object' && 'toString' in value) {
+      try {
+        return BigInt((value as { toString(): string }).toString())
+      } catch {
+        return 0n
+      }
+    }
+    return 0n
+  }, [])
+
+  useEffect(() => {
+    if (!connected || !publicKey || !pool || !poolAddress) {
+      setPositions([])
+      setPositionsError(null)
+      return
+    }
+
+    let cancelled = false
+    setPositionsLoading(true)
+    setPositionsError(null)
+
+    const pairKey = new PublicKey(poolAddress)
+    const baseDecimals = pool.tokenX.decimals
+    const quoteDecimals = pool.tokenY.decimals
+
+    const fetchPositions = async () => {
+      try {
+        const userPositions = await getSarosUserPositions(publicKey.toString(), poolAddress)
+        if (userPositions.length === 0) {
+          if (!cancelled) {
+            setPositions([])
+          }
+          return
+        }
+
+        const enriched: SarosPosition[] = []
+        for (const position of userPositions) {
+          if (cancelled) break
+          try {
+            const reserves = await getSarosBinsReserveInformation({
+              position: new PublicKey(position.position),
+              pair: pairKey,
+              payer: publicKey,
+            })
+
+            const baseRaw = reserves.reduce((acc, bin) => acc + toBigIntSafe(bin.reserveX), 0n)
+            const quoteRaw = reserves.reduce((acc, bin) => acc + toBigIntSafe(bin.reserveY), 0n)
+
+            enriched.push({
+              positionMint: position.positionMint,
+              position: position.position,
+              lowerBinId: position.lowerBinId,
+              upperBinId: position.upperBinId,
+              totalBins: position.upperBinId - position.lowerBinId + 1,
+              baseAmount: Number(baseRaw) / Math.pow(10, baseDecimals),
+              quoteAmount: Number(quoteRaw) / Math.pow(10, quoteDecimals),
+            })
+          } catch (err) {
+            console.error('Failed to fetch reserves for position', position.positionMint, err)
+            enriched.push({
+              positionMint: position.positionMint,
+              position: position.position,
+              lowerBinId: position.lowerBinId,
+              upperBinId: position.upperBinId,
+              totalBins: position.upperBinId - position.lowerBinId + 1,
+              baseAmount: 0,
+              quoteAmount: 0,
+            })
+          }
+        }
+
+        const sorted = enriched.sort((a, b) => a.lowerBinId - b.lowerBinId)
+
+        if (!cancelled) {
+          setPositions(sorted)
+        }
+      } catch (err) {
+        console.error('Failed to load Saros positions', err)
+        if (!cancelled) {
+          setPositions([])
+          setPositionsError(err instanceof Error ? err.message : 'Failed to load positions')
+        }
+      } finally {
+        if (!cancelled) {
+          setPositionsLoading(false)
+        }
+      }
+    }
+
+    void fetchPositions()
+
+    return () => {
+      cancelled = true
+    }
+  }, [connected, publicKey, pool, poolAddress, toBigIntSafe, positionsRefreshNonce])
+
+  const displayPositions = useMemo(() => {
+    return positions.map((position) => {
+      const totalValue = sanitizedPrice != null
+        ? position.baseAmount * sanitizedPrice + position.quoteAmount
+        : null
+      return {
+        ...position,
+        totalValue,
+      }
+    })
+  }, [positions, sanitizedPrice])
+
   const handleAddLiquidity = async () => {
     if (!connected || !publicKey) {
       setWalletModalVisible(true)
@@ -401,6 +578,22 @@ const SarosManage = ({ onBack }: SarosManageProps) => {
       const baseAmountWei = Math.floor(baseAmount * Math.pow(10, pool.tokenX.decimals))
       const quoteAmountWei = Math.floor(quoteAmount * Math.pow(10, pool.tokenY.decimals))
 
+      console.log('[Saros Manage] Add liquidity params', {
+        positionMint: positionMintKey.toString(),
+        payer: publicKey.toString(),
+        pair: pairKey.toString(),
+        liquidityDistribution,
+        amountX: baseAmountWei,
+        amountY: quoteAmountWei,
+        binArrayLower: binArrayLower.toString(),
+        binArrayUpper: binArrayUpper.toString(),
+        minBinId,
+        maxBinId,
+        activeBinId,
+        relativeBinRange,
+        shape: activeShape,
+      })
+
       await addLiquidityToSarosPosition({
         positionMint: positionMintKey,
         payer: publicKey,
@@ -419,9 +612,16 @@ const SarosManage = ({ onBack }: SarosManageProps) => {
       
       transactions.push(addLiquidityTx)
 
-      const signedTxs = await window.solana?.signAllTransactions?.(transactions)
-      if (!signedTxs || signedTxs.length === 0) {
-        throw new Error('Transaction signing failed')
+      let signedTxs: Transaction[]
+      if (signAllTransactions) {
+        signedTxs = await signAllTransactions(transactions)
+      } else if (signTransaction) {
+        signedTxs = []
+        for (const tx of transactions) {
+          signedTxs.push(await signTransaction(tx))
+        }
+      } else {
+        throw new Error('Connected wallet does not support transaction signing')
       }
 
       const signatures: string[] = []
@@ -441,6 +641,7 @@ const SarosManage = ({ onBack }: SarosManageProps) => {
       setSuccessMessage(`Liquidity added successfully! Signature: ${signatures[signatures.length - 1]}`)
       setBaseAmountInput('')
       setQuoteAmountInput('')
+      setPositionsRefreshNonce((nonce) => nonce + 1)
     } catch (err) {
       console.error('Add liquidity error:', err)
       setErrorMessage(err instanceof Error ? err.message : 'Failed to add liquidity')
@@ -448,6 +649,125 @@ const SarosManage = ({ onBack }: SarosManageProps) => {
       setIsAdding(false)
     }
   }
+
+  const handleRemoveLiquidity = useCallback(async (position: SarosPosition) => {
+    if (!connected || !publicKey) {
+      setWalletModalVisible(true)
+      return
+    }
+
+    if (!pool || !poolAddress) {
+      setRemoveError('No pool selected')
+      return
+    }
+
+    if (!pool.tokenX?.mintAddress || !pool.tokenY?.mintAddress) {
+      setRemoveError('Pool token information unavailable')
+      return
+    }
+
+    setRemoveError(null)
+    setRemoveSuccess(null)
+    setRemovingMint(position.positionMint)
+
+    const service = getLiquidityBookService()
+    const serviceConnection = service.connection
+
+    try {
+      const pairKey = new PublicKey(poolAddress)
+      const pairAccount = await getSarosPairAccount(poolAddress)
+
+      const removeResult = await removeSarosLiquidity({
+        maxPositionList: [
+          {
+            position: position.position,
+            start: position.lowerBinId,
+            end: position.upperBinId,
+            positionMint: position.positionMint,
+          },
+        ],
+        payer: publicKey,
+        type: RemoveLiquidityType.Both,
+        pair: pairKey,
+        tokenMintX: new PublicKey(pool.tokenX.mintAddress),
+        tokenMintY: new PublicKey(pool.tokenY.mintAddress),
+        activeId: pairAccount.activeId,
+      })
+
+      const transactions: Transaction[] = []
+      if (removeResult.txCreateAccount) {
+        transactions.push(removeResult.txCreateAccount)
+      }
+      transactions.push(...removeResult.txs)
+      if (removeResult.txCloseAccount) {
+        transactions.push(removeResult.txCloseAccount)
+      }
+
+      if (transactions.length === 0) {
+        setRemoveError('No transactions generated for removal')
+        return
+      }
+
+      const { blockhash, lastValidBlockHeight } = await serviceConnection.getLatestBlockhash('confirmed')
+
+      for (const tx of transactions) {
+        tx.recentBlockhash = blockhash
+        tx.lastValidBlockHeight = lastValidBlockHeight
+        tx.feePayer = publicKey
+      }
+
+      let signedTxs: Transaction[]
+      if (signAllTransactions) {
+        signedTxs = await signAllTransactions(transactions)
+      } else if (signTransaction) {
+        signedTxs = []
+        for (const tx of transactions) {
+          signedTxs.push(await signTransaction(tx))
+        }
+      } else {
+        throw new Error('Connected wallet does not support transaction signing')
+      }
+
+      const signatures: string[] = []
+      for (const signedTx of signedTxs) {
+        const signature = await serviceConnection.sendRawTransaction(signedTx.serialize(), {
+          skipPreflight: false,
+          preflightCommitment: 'confirmed',
+        })
+        signatures.push(signature)
+
+        await serviceConnection.confirmTransaction(
+          { signature, blockhash, lastValidBlockHeight },
+          'finalized'
+        )
+      }
+
+      setRemoveSuccess(`Liquidity removed successfully! Signature: ${signatures[signatures.length - 1]}`)
+      setPositionsRefreshNonce((nonce) => nonce + 1)
+
+      const mintAddresses = [baseMint, quoteMint].filter((mint): mint is string => Boolean(mint))
+      if (mintAddresses.length > 0) {
+        void refreshBalances(connection, publicKey, mintAddresses, { force: true })
+      }
+    } catch (err) {
+      console.error('Remove liquidity error:', err)
+      setRemoveError(err instanceof Error ? err.message : 'Failed to remove liquidity')
+    } finally {
+      setRemovingMint(null)
+    }
+  }, [
+    connected,
+    publicKey,
+    pool,
+    poolAddress,
+    baseMint,
+    quoteMint,
+    signAllTransactions,
+    signTransaction,
+    refreshBalances,
+    connection,
+    setWalletModalVisible,
+  ])
 
   return (
     <Card className="h-full rounded-2xl p-1">
@@ -667,8 +987,95 @@ const SarosManage = ({ onBack }: SarosManageProps) => {
               )}
             </div>
           ) : (
-            <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-border/40 p-4 text-xs text-muted-foreground">
-              Remove liquidity controls coming soon for {label}.
+            <div className="flex h-full flex-col gap-2 rounded-xl border border-border/40 p-2 text-xs">
+              {removeError && (
+                <Card className="border-red-500/50 bg-red-500/10 p-2">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="h-4 w-4 text-red-500 shrink-0" />
+                    <p className="text-[10px] text-red-500">{removeError}</p>
+                  </div>
+                </Card>
+              )}
+              {removeSuccess && (
+                <Card className="border-green-500/50 bg-green-500/10 p-2">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="h-4 w-4 text-green-500 shrink-0" />
+                    <p className="text-[10px] text-green-500 break-all">{removeSuccess}</p>
+                  </div>
+                </Card>
+              )}
+              {positionsLoading ? (
+                <div className="flex flex-1 items-center justify-center text-muted-foreground">
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Loading positions…
+                </div>
+              ) : positionsError ? (
+                <Card className="border-red-500/50 bg-red-500/10 p-2">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="h-4 w-4 text-red-500 shrink-0" />
+                    <p className="text-[10px] text-red-500">{positionsError}</p>
+                  </div>
+                </Card>
+              ) : displayPositions.length === 0 ? (
+                <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-border/40 p-4 text-muted-foreground">
+                  No Saros liquidity positions found for this pool.
+                </div>
+              ) : (
+                <div className="flex flex-1 flex-col gap-2 overflow-auto">
+                  {displayPositions.map((position, index) => {
+                    const headerLabel = `${pool.tokenX.symbol} / ${pool.tokenY.symbol} — Position #${index + 1}`
+                    const valueLabel = position.totalValue !== null
+                      ? `≈ ${formatValueAmount(position.totalValue)} ${pool.tokenY.symbol}`
+                      : '—'
+                    const rangeLabel = `${formatInteger(position.lowerBinId)} → ${formatInteger(position.upperBinId)}`
+                    return (
+                      <Card
+                        key={position.positionMint}
+                        className="rounded-lg border border-border/50 bg-card/40 p-3"
+                      >
+                        <div className="flex items-center justify-between text-[11px] font-medium text-primary/80">
+                          <span>{headerLabel}</span>
+                          <span className="text-muted-foreground">{valueLabel}</span>
+                        </div>
+                        <div className="mt-2 grid grid-cols-2 gap-2 text-[10px] text-muted-foreground">
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between">
+                              <span>Token X</span>
+                              <span className="text-primary/80">{formatTokenAmount(position.baseAmount)} {pool.tokenX.symbol}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span>Token Y</span>
+                              <span className="text-primary/80">{formatTokenAmount(position.quoteAmount)} {pool.tokenY.symbol}</span>
+                            </div>
+                          </div>
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between">
+                              <span>Bin Range</span>
+                              <span className="text-primary/80">{rangeLabel}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span>Total Bins</span>
+                              <span className="text-primary/80">{formatInteger(position.totalBins)}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="mt-3 w-full text-xs"
+                          onClick={() => handleRemoveLiquidity(position)}
+                          disabled={removingMint === position.positionMint}
+                        >
+                          {removingMint === position.positionMint && (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          )}
+                          {removingMint === position.positionMint ? 'Removing Liquidity…' : 'Remove Liquidity'}
+                        </Button>
+                      </Card>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           )}
         </div>

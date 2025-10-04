@@ -146,12 +146,12 @@ export const getSarosPairAccount = async (pairAddress: string) => {
 
 export const getSarosUserPositions = async (payer: string, pairAddress: string) => {
   const service = getLiquidityBookService()
-  return service.getUserPositions({ payer: new PublicKey(payer), pair: new PublicKey(pairAddress) })
+  return withRetries(() => service.getUserPositions({ payer: new PublicKey(payer), pair: new PublicKey(pairAddress) }))
 }
 
 export const getSarosBinsReserveInformation = async (params: GetBinsReserveParams) => {
   const service = getLiquidityBookService()
-  return service.getBinsReserveInformation(params)
+  return withRetries(() => service.getBinsReserveInformation(params))
 }
 
 export const getSarosBinArrayInfo = async (params: GetBinsArrayInfoParams) => {
