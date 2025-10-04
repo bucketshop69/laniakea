@@ -10,7 +10,7 @@ import { useFetchBinDistribution } from '../hooks/useFetchBinDistribution'
 import { LiquidityShape, RemoveLiquidityType } from '@saros-finance/dlmm-sdk/types/services'
 import { useWallet } from '@solana/wallet-adapter-react'
 import { useWalletModal } from '@solana/wallet-adapter-react-ui'
-import { PublicKey, Transaction, Keypair } from '@solana/web3.js'
+import { PublicKey, Transaction as Web3Transaction, Keypair } from '@solana/web3.js'
 import { createUniformDistribution, getMaxBinArray } from '@saros-finance/dlmm-sdk/utils'
 import { getIdFromPrice, getPriceFromId } from '@saros-finance/dlmm-sdk/utils/price'
 import { BIN_ARRAY_SIZE } from '@saros-finance/dlmm-sdk/constants'
@@ -546,10 +546,10 @@ const SarosManage = ({ onBack }: SarosManageProps) => {
       )
 
       let positionMintKey: PublicKey
-      const transactions: Transaction[] = []
+      const transactions: Web3Transaction[] = []
 
       if (!existingPosition) {
-        const createPositionTx = new Transaction()
+        const createPositionTx = new Web3Transaction()
         const positionMint = Keypair.generate()
         positionMintKey = positionMint.publicKey
 
@@ -573,7 +573,7 @@ const SarosManage = ({ onBack }: SarosManageProps) => {
         positionMintKey = new PublicKey(existingPosition.positionMint)
       }
 
-      const addLiquidityTx = new Transaction()
+      const addLiquidityTx = new Web3Transaction()
 
       const baseAmountWei = Math.floor(baseAmount * Math.pow(10, pool.tokenX.decimals))
       const quoteAmountWei = Math.floor(quoteAmount * Math.pow(10, pool.tokenY.decimals))
@@ -612,7 +612,7 @@ const SarosManage = ({ onBack }: SarosManageProps) => {
       
       transactions.push(addLiquidityTx)
 
-      let signedTxs: Transaction[]
+      let signedTxs: Web3Transaction[]
       if (signAllTransactions) {
         signedTxs = await signAllTransactions(transactions)
       } else if (signTransaction) {
@@ -694,19 +694,39 @@ const SarosManage = ({ onBack }: SarosManageProps) => {
         activeId: pairAccount.activeId,
       })
 
-      const transactions: Transaction[] = []
+      const rawTransactions: unknown[] = []
       if (removeResult.txCreateAccount) {
-        transactions.push(removeResult.txCreateAccount)
+        rawTransactions.push(removeResult.txCreateAccount)
       }
-      transactions.push(...removeResult.txs)
+      rawTransactions.push(...removeResult.txs)
       if (removeResult.txCloseAccount) {
-        transactions.push(removeResult.txCloseAccount)
+        rawTransactions.push(removeResult.txCloseAccount)
       }
 
-      if (transactions.length === 0) {
+      if (rawTransactions.length === 0) {
         setRemoveError('No transactions generated for removal')
         return
       }
+
+      const normalizeTransaction = (tx: unknown) => {
+        if (tx instanceof Web3Transaction) {
+          return tx
+        }
+        if (tx && typeof (tx as { serialize?: (options?: any) => Buffer }).serialize === 'function') {
+          try {
+            return Web3Transaction.from(
+              (tx as { serialize: (options?: any) => Buffer }).serialize({ requireAllSignatures: false, verifySignatures: false })
+            )
+          } catch {
+            return Web3Transaction.from(
+              (tx as { serialize: (options?: any) => Buffer }).serialize({ requireAllSignatures: false })
+            )
+          }
+        }
+        throw new Error('Unsupported transaction format received from Saros SDK')
+      }
+
+      const transactions = rawTransactions.map(normalizeTransaction)
 
       const { blockhash, lastValidBlockHeight } = await serviceConnection.getLatestBlockhash('confirmed')
 
@@ -716,7 +736,7 @@ const SarosManage = ({ onBack }: SarosManageProps) => {
         tx.feePayer = publicKey
       }
 
-      let signedTxs: Transaction[]
+      let signedTxs: Web3Transaction[]
       if (signAllTransactions) {
         signedTxs = await signAllTransactions(transactions)
       } else if (signTransaction) {
