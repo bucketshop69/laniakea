@@ -4,6 +4,8 @@ Solana DeFi is exploding with innovation. Meteora for liquidity pools, Drift for
 
 We believe now is the right time to build the Bloomberg Terminal for Solana DeFi. The protocol ecosystem is mature enough. The data infrastructure is ready. And users are drowning in interface complexity.
 
+Live deployment: https://www.laniakea.fun
+
 The key insight: DeFi users don't want more apps - they want better intelligence and unified execution. Imagine seeing all your positions across protocols in one dashboard, getting smart alerts when your Meteora LP goes out of range while you're levered long on Drift, or executing delta-neutral strategies with one-click cross-protocol actions.
 
 Current solutions are either pure aggregators (no insights) or pure analytics (no actions). Laniakea combines both with a modular architecture: Actions, Profile, and Feed components that work consistently across any protocol.
