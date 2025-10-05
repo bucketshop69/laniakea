@@ -12,7 +12,7 @@ interface Star {
   delay: number;
 }
 
-const APP_URL = import.meta.env.VITE_APP_URL ?? (import.meta.env.DEV ? 'http://localhost:5173/app' : 'https://app.laniakea.fun/app');
+const APP_URL = import.meta.env.VITE_APP_URL ?? (import.meta.env.DEV ? 'http://localhost:5173/?surface=app' : 'https://app.laniakea.fun/');
 const SOCIAL_URL = 'https://x.com/bucketshop69';
 
 const LandingPage = () => {
