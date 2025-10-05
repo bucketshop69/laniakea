@@ -1,19 +1,20 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Plus, Search, Droplets } from 'lucide-react';
 import { Card } from '@/components/ui/card';
-import { useDappStore, type SarosPoolOverview } from '@/store/dappStore';
 import SarosActionRail, { type SarosActionDefinition } from './SarosActionRail';
 import SarosDiscover from './SarosDiscover';
 import SarosManage from './SarosManage';
 import SarosCreatePool from './SarosCreatePool';
-
-type SarosActionId = 'discover' | 'create' | 'manage';
+import { useSarosStore, useSarosDataStore, type SarosView } from '../state';
+import type { SarosPoolOverview } from '@/modules/saros/types/domain';
 
 const SarosAction = () => {
-    const [activeAction, setActiveAction] = useState<SarosActionId>('discover');
-    const setSelectedSarosPool = useDappStore((state) => state.setSelectedSarosPool);
+    const setSelectedSarosPool = useSarosDataStore((store) => store.setSelectedPool);
+    const activeAction = useSarosStore((state) => state.activeView);
+    const setActiveAction = useSarosStore((state) => state.setActiveView);
+    const setSelectedPoolAddress = useSarosStore((state) => state.setSelectedPoolAddress);
 
-    const actions = useMemo<SarosActionDefinition<SarosActionId>[]>(
+    const actions = useMemo<SarosActionDefinition<SarosView>[]>(
         () => [
             { id: 'discover', icon: Search, label: 'Discover pools' },
             { id: 'create', icon: Plus, label: 'Create pool' },
@@ -24,11 +25,13 @@ const SarosAction = () => {
 
     const handlePoolSelect = (pool: SarosPoolOverview) => {
         setSelectedSarosPool(pool);
+        setSelectedPoolAddress(pool.pairs[0]?.pair ?? null);
         setActiveAction('manage');
     };
 
     const handleBackToDiscover = () => {
         setSelectedSarosPool(null);
+        setSelectedPoolAddress(null);
         setActiveAction('discover');
     };
 

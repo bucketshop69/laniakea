@@ -1,125 +1,106 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { PoolMetadata } from '@saros-finance/dlmm-sdk/types/config'
-import { fetchSarosPoolMetadata } from '../services/poolService'
+import { fetchSarosPoolMetadata } from '../services/pools'
+import type { SarosPoolMetadataSnapshot } from '../types/domain'
+import { useSarosStore } from '../state'
 
-type FetchState = {
-  metadata: PoolMetadata | null
-  price: string | null
-  baseAmount: number | null
-  quoteAmount: number | null
-  totalValueQuote: number | null
-  isLoading: boolean
-  error: string | null
+interface Options {
+  enabled?: boolean
+  poolAddress?: string
 }
 
-export const useFetchPoolMetadata = (poolAddress?: string) => {
-  const [state, setState] = useState<FetchState>({
-    metadata: null,
-    price: null,
-    baseAmount: null,
-    quoteAmount: null,
-    totalValueQuote: null,
-    isLoading: false,
-    error: null,
-  })
-  const mountedRef = useRef(true)
+interface PoolMetadataResult {
+  metadata: PoolMetadata | null
+  snapshot: SarosPoolMetadataSnapshot | null
+  isLoading: boolean
+  error: string | null
+  refetch: () => Promise<SarosPoolMetadataSnapshot | null>
+}
 
-  const fetchMetadata = useCallback(
-    async (address?: string) => {
-      const target = address ?? poolAddress
-      if (!target) {
-        if (!mountedRef.current) {
-          return null
-        }
-        setState({
-          metadata: null,
-          price: null,
-          baseAmount: null,
-          quoteAmount: null,
-          totalValueQuote: null,
-          isLoading: false,
-          error: null,
-        })
-        return null
-      }
-
-      if (mountedRef.current) {
-        setState((prev) => ({ ...prev, isLoading: true, error: null }))
-      }
-
-      try {
-        const response = await fetchSarosPoolMetadata(target)
-        let price: string | null = null
-
-        const baseAmountValue = Number(response.baseReserve) / Math.pow(10, response.extra.tokenBaseDecimal)
-        const quoteAmountValue = Number(response.quoteReserve) / Math.pow(10, response.extra.tokenQuoteDecimal)
-        if (Number.isFinite(baseAmountValue) && baseAmountValue > 0) {
-          price = (quoteAmountValue / baseAmountValue).toString()
-        }
-        const totalValueQuote = price ? baseAmountValue * Number(price) + quoteAmountValue : null
-
-        if (mountedRef.current) {
-          setState({
-            metadata: response,
-            price,
-            baseAmount: baseAmountValue,
-            quoteAmount: quoteAmountValue,
-            totalValueQuote,
-            isLoading: false,
-            error: null,
-          })
-        }
-        return response
-      } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to load pool metadata'
-        if (mountedRef.current) {
-          setState({
-            metadata: null,
-            price: null,
-            baseAmount: null,
-            quoteAmount: null,
-            totalValueQuote: null,
-            isLoading: false,
-            error: message,
-          })
-        }
-        return null
-      }
-    },
-    [poolAddress]
-  )
+export const useSarosPoolMetadata = ({ poolAddress, enabled = true }: Options = {}): PoolMetadataResult => {
+  const cachedSnapshot = useSarosStore((state) => (poolAddress ? state.metadataByPool[poolAddress] ?? null : null))
+  const upsertPoolMetadata = useSarosStore((state) => state.upsertPoolMetadata)
+  const [snapshot, setSnapshot] = useState<SarosPoolMetadataSnapshot | null>(cachedSnapshot ?? null)
+  const [isLoading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    mountedRef.current = true
-    if (!poolAddress) {
-      setState({
-        metadata: null,
-        price: null,
-        baseAmount: null,
-        quoteAmount: null,
-        totalValueQuote: null,
-        isLoading: false,
-        error: null,
-      })
-    } else {
-      void fetchMetadata(poolAddress)
+    if (cachedSnapshot) {
+      setSnapshot(cachedSnapshot)
     }
+  }, [cachedSnapshot])
+
+  useEffect(() => {
+    if (!enabled || !poolAddress) {
+      setSnapshot(null)
+      setLoading(false)
+      setError(null)
+      return
+    }
+
+    let cancelled = false
+
+    const load = async () => {
+      setLoading(true)
+      setError(null)
+      try {
+        const result = await fetchSarosPoolMetadata(poolAddress)
+        if (!cancelled) {
+          setSnapshot(result)
+          upsertPoolMetadata(result)
+        }
+      } catch (err) {
+        if (!cancelled) {
+          const message = err instanceof Error ? err.message : 'Failed to load pool metadata'
+          setError(message)
+          setSnapshot(null)
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      }
+    }
+
+    void load()
 
     return () => {
-      mountedRef.current = false
+      cancelled = true
     }
-  }, [poolAddress, fetchMetadata])
+  }, [poolAddress, enabled, upsertPoolMetadata])
+
+  const refetch = async () => {
+    if (!poolAddress || !enabled) {
+      setSnapshot(null)
+      return null
+    }
+
+    try {
+      setLoading(true)
+      setError(null)
+      const result = await fetchSarosPoolMetadata(poolAddress)
+      setSnapshot(result)
+      upsertPoolMetadata(result)
+      return result
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load pool metadata'
+      setError(message)
+      setSnapshot(null)
+      return null
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const metadata = useMemo(() => snapshot?.raw ?? null, [snapshot])
 
   return {
-    metadata: state.metadata,
-    price: state.price,
-    baseAmount: state.baseAmount,
-    quoteAmount: state.quoteAmount,
-    totalValueQuote: state.totalValueQuote,
-    isLoading: state.isLoading,
-    error: state.error,
-    refetch: fetchMetadata,
+    metadata,
+    snapshot,
+    isLoading,
+    error,
+    refetch,
   }
 }
 
-export default useFetchPoolMetadata
+export default useSarosPoolMetadata

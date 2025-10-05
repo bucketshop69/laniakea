@@ -1,12 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ArrowLeft, MinusCircle, PlusCircle, Loader2, AlertCircle } from 'lucide-react'
 import { Card } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { cn } from '@/lib/utils'
-import { useDappStore } from '@/store/dappStore'
-import { useFetchPoolMetadata } from '../hooks/useFetchPoolMetadata'
-import { useFetchBinDistribution } from '../hooks/useFetchBinDistribution'
+import { useSarosPoolMetadata } from '../hooks/useFetchPoolMetadata'
+import { useSarosBinDistribution } from '../hooks/useFetchBinDistribution'
 import { LiquidityShape, RemoveLiquidityType } from '@saros-finance/dlmm-sdk/types/services'
 import { useWallet } from '@solana/wallet-adapter-react'
 import { useWalletModal } from '@solana/wallet-adapter-react-ui'
@@ -14,38 +9,28 @@ import { PublicKey, Transaction as Web3Transaction, Keypair } from '@solana/web3
 import { createUniformDistribution, getMaxBinArray } from '@saros-finance/dlmm-sdk/utils'
 import { getIdFromPrice, getPriceFromId } from '@saros-finance/dlmm-sdk/utils/price'
 import { BIN_ARRAY_SIZE } from '@saros-finance/dlmm-sdk/constants'
-import {
-  addLiquidityToSarosPosition,
-  createSarosPosition,
-  getSarosUserPositions,
-  getSarosPairAccount,
-  getSarosBinsReserveInformation,
-  removeSarosLiquidity,
-} from '../services/poolService'
+import { addLiquidityToSarosPosition, createSarosPosition, removeSarosLiquidity } from '../services/liquidity'
+import { getSarosUserPositions, getSarosBinsReserveInformation } from '../services/positions'
+import { getSarosPairAccount } from '../services/pools'
 import { getLiquidityBookService } from '../lib/liquidityBook'
 import { useWalletBalanceStore, type WalletTokenBalance } from '@/store/walletBalanceStore'
 import { getSolanaConnection } from '@/lib/solanaConnection'
-import BinChart from './BinChart'
-
-type ManageTab = 'add' | 'remove'
+import { useSarosStore, useSarosDataStore, type SarosManageFormState, type SarosManageTab } from '../state'
+import ManageHeader from './manage/ManageHeader'
+import AddLiquidityForm from './manage/AddLiquidityForm'
+import RemoveLiquidityPanel, { type SarosDisplayPosition } from './manage/RemoveLiquidityPanel'
 
 interface SarosManageProps {
   onBack: () => void
 }
 
 const SarosManage = ({ onBack }: SarosManageProps) => {
-  const pool = useDappStore((state) => state.saros.selectedPool)
+  const pool = useSarosDataStore((state) => state.data.selectedPool)
   const baseMint = pool?.tokenX.mintAddress ?? ''
   const quoteMint = pool?.tokenY.mintAddress ?? ''
   const { publicKey, connected, signTransaction, signAllTransactions } = useWallet()
   const connection = useMemo(() => getSolanaConnection(), [])
   const { setVisible: setWalletModalVisible } = useWalletModal()
-  const [tab, setTab] = useState<ManageTab>('add')
-  const [activeShape, setActiveShape] = useState<LiquidityShape>(LiquidityShape.Spot)
-  const [baseAmountInput, setBaseAmountInput] = useState('')
-  const [quoteAmountInput, setQuoteAmountInput] = useState('')
-  const [minBinId, setMinBinId] = useState<number | null>(null)
-  const [maxBinId, setMaxBinId] = useState<number | null>(null)
   const [isAdding, setIsAdding] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
@@ -76,17 +61,37 @@ const SarosManage = ({ onBack }: SarosManageProps) => {
     quoteMint ? state.balancesByMint[quoteMint] : undefined
   ))
 
-  const poolAddress = pool?.pairs[0]?.pair
+  const poolAddress = pool?.pairs[0]?.pair ?? null
+  const manageForm = useSarosStore((state) => (poolAddress ? state.manageForms[poolAddress] : undefined))
+  const updateManageForm = useSarosStore((state) => state.updateManageForm)
+  const setActiveView = useSarosStore((state) => state.setActiveView)
+  const setSelectedPoolAddress = useSarosStore((state) => state.setSelectedPoolAddress)
+
+  const tab: SarosManageTab = manageForm?.tab ?? 'add'
+  const activeShape = manageForm?.activeShape ?? LiquidityShape.Spot
+  const baseAmountInput = manageForm?.baseAmountInput ?? ''
+  const quoteAmountInput = manageForm?.quoteAmountInput ?? ''
+  const minBinId = manageForm?.minBinId ?? null
+  const maxBinId = manageForm?.maxBinId ?? null
+
+  const updateForm = useCallback((patch: Partial<SarosManageFormState>) => {
+    if (!poolAddress) {
+      return
+    }
+    updateManageForm(poolAddress, patch)
+  }, [poolAddress, updateManageForm])
   const primaryPair = pool?.pairs[0]
   const {
     metadata,
-    price,
-    baseAmount,
-    quoteAmount,
-    totalValueQuote,
+    snapshot,
     isLoading,
     error,
-  } = useFetchPoolMetadata(poolAddress)
+  } = useSarosPoolMetadata({ poolAddress: poolAddress ?? undefined, enabled: Boolean(poolAddress) })
+
+  const price = snapshot?.price ?? null
+  const baseAmount = snapshot?.baseReserve ?? null
+  const quoteAmount = snapshot?.quoteReserve ?? null
+  const totalValueQuote = snapshot?.totalValueQuote ?? null
 
   const binDistributionParams = useMemo(() => {
     if (!primaryPair || !pool) return undefined
@@ -100,7 +105,29 @@ const SarosManage = ({ onBack }: SarosManageProps) => {
     }
   }, [primaryPair, pool])
 
-  const { data: binDistribution, isLoading: binLoading } = useFetchBinDistribution(binDistributionParams)
+  const binDistributionConfig = useMemo(() => {
+    if (!binDistributionParams) {
+      return { enabled: false } as const
+    }
+    return { ...binDistributionParams, enabled: true } as const
+  }, [binDistributionParams])
+
+  const {
+    data: binDistribution,
+    isLoading: binLoading,
+  } = useSarosBinDistribution(binDistributionConfig)
+
+  useEffect(() => {
+    setActiveView('manage')
+  }, [setActiveView])
+
+  useEffect(() => {
+    if (poolAddress) {
+      setSelectedPoolAddress(poolAddress)
+    } else {
+      setSelectedPoolAddress(null)
+    }
+  }, [poolAddress, setSelectedPoolAddress])
 
   useEffect(() => {
     if (!connected || !publicKey || !pool) {
@@ -155,10 +182,9 @@ const SarosManage = ({ onBack }: SarosManageProps) => {
   useEffect(() => {
     if (binDistribution.length > 0 && minBinId === null && maxBinId === null && primaryPair) {
       const activeBin = primaryPair.activeBin
-      setMinBinId(activeBin - 10)
-      setMaxBinId(activeBin + 10)
+      updateForm({ minBinId: activeBin - 10, maxBinId: activeBin + 10 })
     }
-  }, [binDistribution, minBinId, maxBinId, primaryPair])
+  }, [binDistribution, minBinId, maxBinId, primaryPair, updateForm])
 
   const handleRangeChange = (newMinBinId: number, newMaxBinId: number) => {
     const numBins = newMaxBinId - newMinBinId + 1
@@ -167,8 +193,7 @@ const SarosManage = ({ onBack }: SarosManageProps) => {
       return
     }
     setErrorMessage(null)
-    setMinBinId(newMinBinId)
-    setMaxBinId(newMaxBinId)
+    updateForm({ minBinId: newMinBinId, maxBinId: newMaxBinId })
   }
 
   const handleMinPriceChange = (value: string) => {
@@ -194,7 +219,7 @@ const SarosManage = ({ onBack }: SarosManageProps) => {
     }
 
     setErrorMessage(null)
-    setMinBinId(newMinBinId)
+    updateForm({ minBinId: newMinBinId })
   }
 
   const handleMaxPriceChange = (value: string) => {
@@ -220,7 +245,7 @@ const SarosManage = ({ onBack }: SarosManageProps) => {
     }
 
     setErrorMessage(null)
-    setMaxBinId(newMaxBinId)
+    updateForm({ maxBinId: newMaxBinId })
   }
 
   useEffect(() => {
@@ -246,20 +271,6 @@ const SarosManage = ({ onBack }: SarosManageProps) => {
     )
   }
 
-  const label = `${pool.tokenX.symbol}/${pool.tokenY.symbol}`
-  let priceTone = 'text-[11px] text-muted-foreground'
-  let priceLabel = '—'
-  if (isLoading) {
-    priceLabel = 'Loading…'
-  } else if (error) {
-    priceTone = 'text-[11px] text-red-400'
-    priceLabel = error
-  } else if (metadata) {
-    priceLabel = price
-      ? `1 ${pool.tokenX.symbol} ≈ ${Number(price).toFixed(6)} ${pool.tokenY.symbol}`
-      : `Reserves: ${metadata.baseReserve} / ${metadata.quoteReserve}`
-  }
-
   const shapeOptions = useMemo(
     () => (
       [
@@ -270,6 +281,11 @@ const SarosManage = ({ onBack }: SarosManageProps) => {
     ),
     []
   )
+
+  const baseBalanceLabel = renderBalanceLabel(baseTokenBalance, pool.tokenX.symbol)
+  const quoteBalanceLabel = renderBalanceLabel(quoteTokenBalance, pool.tokenY.symbol)
+  const activeBinId = primaryPair?.activeBin ?? null
+  const isAddDisabled = !baseAmountInput || !quoteAmountInput || minBinId === null || maxBinId === null
 
   const displayMinPrice = useMemo(() => {
     if (!primaryPair || !pool || minBinId === null) return null
@@ -285,6 +301,21 @@ const SarosManage = ({ onBack }: SarosManageProps) => {
     if (!primaryPair || !pool) return null
     return getPriceFromId(primaryPair.binStep, primaryPair.activeBin, pool.tokenX.decimals, pool.tokenY.decimals)
   }, [primaryPair, pool])
+
+  const label = `${pool.tokenX.symbol}/${pool.tokenY.symbol}`
+  let priceTone = 'text-[11px] text-muted-foreground'
+  let priceLabel = '—'
+  if (isLoading) {
+    priceLabel = 'Loading…'
+  } else if (error) {
+    priceTone = 'text-[11px] text-red-400'
+    priceLabel = error
+  } else if (metadata) {
+    const effectivePrice = displayActiveBinPrice ?? price
+    priceLabel = effectivePrice != null
+      ? `1 ${pool.tokenX.symbol} ≈ ${effectivePrice.toFixed(6)} ${pool.tokenY.symbol}`
+      : `Reserves: ${metadata.baseReserve} / ${metadata.quoteReserve}`
+  }
 
   const minPricePercent = useMemo(() => {
     if (displayMinPrice === null || displayActiveBinPrice === null || displayActiveBinPrice === 0) return null
@@ -302,9 +333,10 @@ const SarosManage = ({ onBack }: SarosManageProps) => {
   }, [minBinId, maxBinId])
 
   const sanitizedPrice = useMemo(() => {
-    if (price == null) return null
-    const priceNumber = Number(price)
-    return Number.isFinite(priceNumber) ? priceNumber : null
+    if (price == null || Number.isNaN(price) || !Number.isFinite(price)) {
+      return null
+    }
+    return price
   }, [price])
 
   const formatTokenAmount = useCallback((amount: number) => {
@@ -442,7 +474,7 @@ const SarosManage = ({ onBack }: SarosManageProps) => {
     }
   }, [connected, publicKey, pool, poolAddress, toBigIntSafe, positionsRefreshNonce])
 
-  const displayPositions = useMemo(() => {
+  const displayPositions = useMemo<SarosDisplayPosition[]>(() => {
     return positions.map((position) => {
       const totalValue = sanitizedPrice != null
         ? position.baseAmount * sanitizedPrice + position.quoteAmount
@@ -546,12 +578,14 @@ const SarosManage = ({ onBack }: SarosManageProps) => {
       )
 
       let positionMintKey: PublicKey
+      let positionMintKeypair: Keypair | null = null
       const transactions: Web3Transaction[] = []
 
       if (!existingPosition) {
         const createPositionTx = new Web3Transaction()
         const positionMint = Keypair.generate()
         positionMintKey = positionMint.publicKey
+        positionMintKeypair = positionMint
 
         await createSarosPosition({
           pair: pairKey,
@@ -567,7 +601,7 @@ const SarosManage = ({ onBack }: SarosManageProps) => {
         createPositionTx.recentBlockhash = blockhash
         createPositionTx.feePayer = publicKey
         createPositionTx.partialSign(positionMint)
-        
+
         transactions.push(createPositionTx)
       } else {
         positionMintKey = new PublicKey(existingPosition.positionMint)
@@ -609,7 +643,13 @@ const SarosManage = ({ onBack }: SarosManageProps) => {
       const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed')
       addLiquidityTx.recentBlockhash = blockhash
       addLiquidityTx.feePayer = publicKey
-      
+      if (positionMintKeypair) {
+        const needsPositionSignature = addLiquidityTx.signatures.some((entry) => entry.publicKey.equals(positionMintKeypair.publicKey))
+        if (needsPositionSignature) {
+          addLiquidityTx.partialSign(positionMintKeypair)
+        }
+      }
+
       transactions.push(addLiquidityTx)
 
       let signedTxs: Web3Transaction[]
@@ -639,8 +679,7 @@ const SarosManage = ({ onBack }: SarosManageProps) => {
       }
 
       setSuccessMessage(`Liquidity added successfully! Signature: ${signatures[signatures.length - 1]}`)
-      setBaseAmountInput('')
-      setQuoteAmountInput('')
+      updateForm({ baseAmountInput: '', quoteAmountInput: '' })
       setPositionsRefreshNonce((nonce) => nonce + 1)
     } catch (err) {
       console.error('Add liquidity error:', err)
@@ -650,7 +689,7 @@ const SarosManage = ({ onBack }: SarosManageProps) => {
     }
   }
 
-  const handleRemoveLiquidity = useCallback(async (position: SarosPosition) => {
+  const handleRemoveLiquidity = useCallback(async (position: SarosDisplayPosition) => {
     if (!connected || !publicKey) {
       setWalletModalVisible(true)
       return
@@ -708,27 +747,62 @@ const SarosManage = ({ onBack }: SarosManageProps) => {
         return
       }
 
-      const normalizeTransaction = (tx: unknown) => {
+      const { blockhash, lastValidBlockHeight } = await serviceConnection.getLatestBlockhash('confirmed')
+
+      const normalizeTransaction = (tx: unknown): Web3Transaction => {
         if (tx instanceof Web3Transaction) {
+          tx.recentBlockhash = blockhash
+          tx.lastValidBlockHeight = lastValidBlockHeight
+          tx.feePayer = publicKey
           return tx
         }
-        if (tx && typeof (tx as { serialize?: (options?: any) => Buffer }).serialize === 'function') {
-          try {
+
+        if (tx && typeof tx === 'object') {
+          const candidate = tx as { serialize?: (options?: any) => Uint8Array | Buffer; feePayer?: PublicKey; recentBlockhash?: string; lastValidBlockHeight?: number }
+
+          if (typeof candidate.serialize === 'function') {
+            candidate.recentBlockhash = blockhash
+            candidate.lastValidBlockHeight = lastValidBlockHeight
+            if (!candidate.feePayer) {
+              candidate.feePayer = publicKey
+            }
+
             return Web3Transaction.from(
-              (tx as { serialize: (options?: any) => Buffer }).serialize({ requireAllSignatures: false, verifySignatures: false })
-            )
-          } catch {
-            return Web3Transaction.from(
-              (tx as { serialize: (options?: any) => Buffer }).serialize({ requireAllSignatures: false })
+              candidate.serialize({ requireAllSignatures: false, verifySignatures: false })
             )
           }
         }
+
+        if (tx instanceof Uint8Array) {
+          const transaction = Web3Transaction.from(tx)
+          transaction.recentBlockhash = blockhash
+          transaction.lastValidBlockHeight = lastValidBlockHeight
+          transaction.feePayer = publicKey
+          return transaction
+        }
+
+        if (typeof ArrayBuffer !== 'undefined' && tx instanceof ArrayBuffer) {
+          const transaction = Web3Transaction.from(new Uint8Array(tx))
+          transaction.recentBlockhash = blockhash
+          transaction.lastValidBlockHeight = lastValidBlockHeight
+          transaction.feePayer = publicKey
+          return transaction
+        }
+
+        if (typeof ArrayBuffer !== 'undefined' && ArrayBuffer.isView(tx as ArrayBufferView)) {
+          const view = tx as ArrayBufferView
+          const buffer = new Uint8Array(view.buffer.slice(view.byteOffset, view.byteOffset + view.byteLength))
+          const transaction = Web3Transaction.from(buffer)
+          transaction.recentBlockhash = blockhash
+          transaction.lastValidBlockHeight = lastValidBlockHeight
+          transaction.feePayer = publicKey
+          return transaction
+        }
+
         throw new Error('Unsupported transaction format received from Saros SDK')
       }
 
       const transactions = rawTransactions.map(normalizeTransaction)
-
-      const { blockhash, lastValidBlockHeight } = await serviceConnection.getLatestBlockhash('confirmed')
 
       for (const tx of transactions) {
         tx.recentBlockhash = blockhash
@@ -792,311 +866,65 @@ const SarosManage = ({ onBack }: SarosManageProps) => {
   return (
     <Card className="h-full rounded-2xl p-1">
       <div className="flex h-full flex-col gap-1">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-muted-foreground"
-              onClick={onBack}
-              aria-label="Back to pools"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div className="flex flex-col gap-0.5">
-              <span className="text-sm font-medium text-primary leading-none">{label}</span>
-              <span className={priceTone}>{priceLabel}</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-1">
-            {[
-              { id: 'add' as ManageTab, label: 'Add Liquidity', icon: PlusCircle },
-              { id: 'remove' as ManageTab, label: 'Remove Liquidity', icon: MinusCircle },
-            ].map(({ id, label: tabLabel, icon: Icon }) => {
-              const isActive = tab === id
-              return (
-                <Button
-                  key={id}
-                  type="button"
-                  variant="ghost"
-                  className={`relative h-8 px-3 text-xs transition-colors ${isActive ? 'text-primary' : 'text-muted-foreground hover:text-primary'
-                    }`}
-                  onClick={() => setTab(id)}
-                >
-                  <span className="flex items-center gap-1">
-                    <Icon className="h-4 w-4" />
-                    {tabLabel}
-                  </span>
-                  <span
-                    className={`absolute bottom-0 left-2 right-2 h-0.5 rounded-full transition-colors ${isActive ? 'bg-primary' : 'bg-transparent'
-                      }`}
-                  ></span>
-                </Button>
-              )
-            })}
-          </div>
-        </div>
+        <ManageHeader
+          onBack={onBack}
+          label={label}
+          priceLabel={priceLabel}
+          priceToneClass={priceTone}
+          activeTab={tab}
+          onTabChange={(nextTab) => updateForm({ tab: nextTab })}
+        />
 
         <div className="flex-1 overflow-auto">
           {tab === 'add' ? (
-            <div className="flex h-full flex-col gap-2 rounded-xl border border-border/40 p-2 text-xs">
-              {/* Token Amounts - Compact Side by Side */}
-              <div className="grid grid-cols-2 gap-2">
-                <div className="flex flex-col gap-1">
-                  <Input
-                    value={baseAmountInput}
-                    onChange={(e) => setBaseAmountInput(e.target.value)}
-                    placeholder={`${pool.tokenX.symbol} 0.00`}
-                    inputMode="decimal"
-                    className="h-8 text-xs"
-                  />
-                  <span className="text-[10px] text-muted-foreground">
-                    {renderBalanceLabel(baseTokenBalance, pool.tokenX.symbol)}
-                  </span>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <Input
-                    value={quoteAmountInput}
-                    onChange={(e) => setQuoteAmountInput(e.target.value)}
-                    placeholder={`${pool.tokenY.symbol} 0.00`}
-                    inputMode="decimal"
-                    className="h-8 text-xs"
-                  />
-                  <span className="text-[10px] text-muted-foreground">
-                    {renderBalanceLabel(quoteTokenBalance, pool.tokenY.symbol)}
-                  </span>
-                </div>
-              </div>
-
-              {/* Strategy Selector - Compact Row */}
-              <div className="grid grid-cols-3 gap-1">
-                {shapeOptions.map((option) => (
-                  <Button
-                    key={option.id}
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className={cn(
-                      'h-7 text-xs',
-                      activeShape === option.id ? 'border border-primary bg-primary/10 text-primary' : 'border border-transparent'
-                    )}
-                    onClick={() => setActiveShape(option.id)}
-                  >
-                    {option.label}
-                  </Button>
-                ))}
-              </div>
-
-              {/* Bin Chart - Compact */}
-              <div className="relative h-[220px] rounded-lg border border-border/40 bg-card/30 p-2">
-                {binLoading ? (
-                  <div className="flex h-full items-center justify-center text-muted-foreground">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span className="ml-2">Loading bins...</span>
-                  </div>
-                ) : binDistribution.length === 0 ? (
-                  <div className="flex h-full items-center justify-center text-muted-foreground">
-                    No liquidity data available
-                  </div>
-                ) : primaryPair && minBinId !== null && maxBinId !== null ? (
-                  <BinChart
-                    binData={binDistribution}
-                    activeBinId={primaryPair.activeBin}
-                    minBinId={minBinId}
-                    maxBinId={maxBinId}
-                    onRangeChange={handleRangeChange}
-                    baseSymbol={pool.tokenX.symbol}
-                    quoteSymbol={pool.tokenY.symbol}
-                  />
-                ) : null}
-              </div>
-
-              {/* Price Range Inputs - Editable */}
-              <div className="grid grid-cols-3 gap-2">
-                <div>
-                  <label className="mb-1 block text-[11px] font-medium text-muted-foreground">
-                    Min Price
-                    {minPricePercent !== null && (
-                      <span className={cn('ml-1', minPricePercent < 0 ? 'text-red-400' : 'text-blue-400')}>
-                        ({minPricePercent >= 0 ? '+' : ''}{minPricePercent.toFixed(1)}%)
-                      </span>
-                    )}
-                  </label>
-                  <Input
-                    type="text"
-                    value={displayMinPrice !== null ? displayMinPrice.toFixed(8) : ''}
-                    onChange={(e) => handleMinPriceChange(e.target.value)}
-                    onBlur={(e) => handleMinPriceChange(e.target.value)}
-                    placeholder="Min price"
-                    className="h-7 text-xs"
-                    inputMode="decimal"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-[11px] font-medium text-muted-foreground">
-                    Max Price
-                    {maxPricePercent !== null && (
-                      <span className={cn('ml-1', maxPricePercent < 0 ? 'text-red-400' : 'text-blue-400')}>
-                        ({maxPricePercent >= 0 ? '+' : ''}{maxPricePercent.toFixed(1)}%)
-                      </span>
-                    )}
-                  </label>
-                  <Input
-                    type="text"
-                    value={displayMaxPrice !== null ? displayMaxPrice.toFixed(8) : ''}
-                    onChange={(e) => handleMaxPriceChange(e.target.value)}
-                    onBlur={(e) => handleMaxPriceChange(e.target.value)}
-                    placeholder="Max price"
-                    className="h-7 text-xs"
-                    inputMode="decimal"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-[11px] font-medium text-muted-foreground">
-                    Bins
-                  </label>
-                  <Input
-                    type="text"
-                    value={numBins}
-                    disabled
-                    className="h-7 bg-muted text-xs text-center"
-                  />
-                </div>
-              </div>
-
-              {/* Messages and Action Button */}
-              {errorMessage && (
-                <Card className="border-red-500/50 bg-red-500/10 p-2">
-                  <div className="flex items-start gap-2">
-                    <AlertCircle className="h-4 w-4 text-red-500 shrink-0" />
-                    <p className="text-[10px] text-red-500">{errorMessage}</p>
-                  </div>
-                </Card>
-              )}
-
-              {successMessage && (
-                <Card className="border-green-500/50 bg-green-500/10 p-2">
-                  <div className="flex items-start gap-2">
-                    <AlertCircle className="h-4 w-4 text-green-500 shrink-0" />
-                    <p className="text-[10px] text-green-500 break-all">{successMessage}</p>
-                  </div>
-                </Card>
-              )}
-
-              {!connected ? (
-                <Button type="button" size="sm" className="w-full text-xs" onClick={() => setWalletModalVisible(true)}>
-                  Connect Wallet
-                </Button>
-              ) : (
-                <Button
-                  type="button"
-                  size="sm"
-                  className="w-full text-xs"
-                  onClick={handleAddLiquidity}
-                  disabled={isAdding || !baseAmountInput || !quoteAmountInput || minBinId === null || maxBinId === null}
-                >
-                  {isAdding && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {isAdding ? 'Adding Liquidity...' : (
-                    <>
-                      <PlusCircle className="mr-2 h-4 w-4" />
-                      Add Liquidity
-                    </>
-                  )}
-                </Button>
-              )}
-            </div>
+            <AddLiquidityForm
+              baseAmountInput={baseAmountInput}
+              quoteAmountInput={quoteAmountInput}
+              onChangeBaseAmount={(value) => updateForm({ baseAmountInput: value })}
+              onChangeQuoteAmount={(value) => updateForm({ quoteAmountInput: value })}
+              baseBalanceLabel={baseBalanceLabel}
+              quoteBalanceLabel={quoteBalanceLabel}
+              shapeOptions={shapeOptions}
+              activeShape={activeShape}
+              onShapeChange={(shape) => updateForm({ activeShape: shape })}
+              binData={binDistribution}
+              binLoading={binLoading}
+              activeBinId={activeBinId}
+              minBinId={minBinId}
+              maxBinId={maxBinId}
+              onRangeChange={handleRangeChange}
+              baseSymbol={pool.tokenX.symbol}
+              quoteSymbol={pool.tokenY.symbol}
+              displayMinPrice={displayMinPrice}
+              displayMaxPrice={displayMaxPrice}
+              minPricePercent={minPricePercent}
+              maxPricePercent={maxPricePercent}
+              numBins={numBins}
+              onMinPriceChange={handleMinPriceChange}
+              onMaxPriceChange={handleMaxPriceChange}
+              errorMessage={errorMessage}
+              successMessage={successMessage}
+              isConnected={connected}
+              onRequestConnect={() => setWalletModalVisible(true)}
+              onSubmit={handleAddLiquidity}
+              isSubmitting={isAdding}
+              isSubmitDisabled={isAddDisabled}
+            />
           ) : (
-            <div className="flex h-full flex-col gap-2 rounded-xl border border-border/40 p-2 text-xs">
-              {removeError && (
-                <Card className="border-red-500/50 bg-red-500/10 p-2">
-                  <div className="flex items-start gap-2">
-                    <AlertCircle className="h-4 w-4 text-red-500 shrink-0" />
-                    <p className="text-[10px] text-red-500">{removeError}</p>
-                  </div>
-                </Card>
-              )}
-              {removeSuccess && (
-                <Card className="border-green-500/50 bg-green-500/10 p-2">
-                  <div className="flex items-start gap-2">
-                    <AlertCircle className="h-4 w-4 text-green-500 shrink-0" />
-                    <p className="text-[10px] text-green-500 break-all">{removeSuccess}</p>
-                  </div>
-                </Card>
-              )}
-              {positionsLoading ? (
-                <div className="flex flex-1 items-center justify-center text-muted-foreground">
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Loading positions…
-                </div>
-              ) : positionsError ? (
-                <Card className="border-red-500/50 bg-red-500/10 p-2">
-                  <div className="flex items-start gap-2">
-                    <AlertCircle className="h-4 w-4 text-red-500 shrink-0" />
-                    <p className="text-[10px] text-red-500">{positionsError}</p>
-                  </div>
-                </Card>
-              ) : displayPositions.length === 0 ? (
-                <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-border/40 p-4 text-muted-foreground">
-                  No Saros liquidity positions found for this pool.
-                </div>
-              ) : (
-                <div className="flex flex-1 flex-col gap-2 overflow-auto">
-                  {displayPositions.map((position, index) => {
-                    const headerLabel = `${pool.tokenX.symbol} / ${pool.tokenY.symbol} — Position #${index + 1}`
-                    const valueLabel = position.totalValue !== null
-                      ? `≈ ${formatValueAmount(position.totalValue)} ${pool.tokenY.symbol}`
-                      : '—'
-                    const rangeLabel = `${formatInteger(position.lowerBinId)} → ${formatInteger(position.upperBinId)}`
-                    return (
-                      <Card
-                        key={position.positionMint}
-                        className="rounded-lg border border-border/50 bg-card/40 p-3"
-                      >
-                        <div className="flex items-center justify-between text-[11px] font-medium text-primary/80">
-                          <span>{headerLabel}</span>
-                          <span className="text-muted-foreground">{valueLabel}</span>
-                        </div>
-                        <div className="mt-2 grid grid-cols-2 gap-2 text-[10px] text-muted-foreground">
-                          <div className="space-y-1">
-                            <div className="flex items-center justify-between">
-                              <span>Token X</span>
-                              <span className="text-primary/80">{formatTokenAmount(position.baseAmount)} {pool.tokenX.symbol}</span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span>Token Y</span>
-                              <span className="text-primary/80">{formatTokenAmount(position.quoteAmount)} {pool.tokenY.symbol}</span>
-                            </div>
-                          </div>
-                          <div className="space-y-1">
-                            <div className="flex items-center justify-between">
-                              <span>Bin Range</span>
-                              <span className="text-primary/80">{rangeLabel}</span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span>Total Bins</span>
-                              <span className="text-primary/80">{formatInteger(position.totalBins)}</span>
-                            </div>
-                          </div>
-                        </div>
-                        <Button
-                          type="button"
-                          size="sm"
-                          className="mt-3 w-full text-xs"
-                          onClick={() => handleRemoveLiquidity(position)}
-                          disabled={removingMint === position.positionMint}
-                        >
-                          {removingMint === position.positionMint && (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          )}
-                          {removingMint === position.positionMint ? 'Removing Liquidity…' : 'Remove Liquidity'}
-                        </Button>
-                      </Card>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
+            <RemoveLiquidityPanel
+              removeError={removeError}
+              removeSuccess={removeSuccess}
+              positionsLoading={positionsLoading}
+              positionsError={positionsError}
+              positions={displayPositions}
+              baseSymbol={pool.tokenX.symbol}
+              quoteSymbol={pool.tokenY.symbol}
+              removingMint={removingMint}
+              onRemove={handleRemoveLiquidity}
+              formatTokenAmount={formatTokenAmount}
+              formatInteger={formatInteger}
+              formatValueAmount={formatValueAmount}
+            />
           )}
         </div>
       </div>

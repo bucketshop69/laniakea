@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { fetchSarosBinDistribution, type SarosBinLiquidityPoint } from '../services/poolService'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { fetchSarosBinDistribution } from '../services/pools'
+import type { SarosBinLiquidityPoint } from '../types/domain'
 
 type State = {
   data: SarosBinLiquidityPoint[]
@@ -7,19 +8,29 @@ type State = {
   error: string | null
 }
 
-export const useFetchBinDistribution = (params?: {
+interface Params {
   pairAddress?: string
   activeBin?: number
   binStep?: number
   baseDecimals?: number
   quoteDecimals?: number
   range?: number
-}) => {
+  enabled?: boolean
+}
+
+export const useSarosBinDistribution = (params?: Params) => {
   const [state, setState] = useState<State>({ data: [], isLoading: false, error: null })
   const mountedRef = useRef(true)
 
   const fetchData = useCallback(async () => {
-    if (!params?.pairAddress || params.activeBin == null || params.binStep == null || params.baseDecimals == null || params.quoteDecimals == null) {
+    if (
+      !params?.enabled ||
+      !params?.pairAddress ||
+      params.activeBin == null ||
+      params.binStep == null ||
+      params.baseDecimals == null ||
+      params.quoteDecimals == null
+    ) {
       if (mountedRef.current) {
         setState({ data: [], isLoading: false, error: null })
       }
@@ -59,12 +70,22 @@ export const useFetchBinDistribution = (params?: {
     }
   }, [fetchData])
 
+  const paramsKey = useMemo(() => ({
+    pairAddress: params?.pairAddress,
+    activeBin: params?.activeBin,
+    binStep: params?.binStep,
+    baseDecimals: params?.baseDecimals,
+    quoteDecimals: params?.quoteDecimals,
+    range: params?.range,
+  }), [params?.pairAddress, params?.activeBin, params?.binStep, params?.baseDecimals, params?.quoteDecimals, params?.range])
+
   return {
     data: state.data,
     isLoading: state.isLoading,
     error: state.error,
     refetch: fetchData,
+    paramsKey,
   }
 }
 
-export default useFetchBinDistribution
+export default useSarosBinDistribution

@@ -1,36 +1,9 @@
-import { LiquidityBookServices, MODE, type ILiquidityBookConfig } from '@saros-finance/dlmm-sdk'
-import { getSolanaEndpoint } from '@/lib/solanaConnection'
+import { getSdkClient, resetSdkClient, sdkClientConfig } from '../services/sdkClient'
 
-const DEFAULT_RPC_ENDPOINT = getSolanaEndpoint()
+export const getLiquidityBookService = getSdkClient
 
-const DEFAULT_CONFIG: ILiquidityBookConfig = {
-  mode: MODE.MAINNET,
-  options: {
-    rpcUrl: DEFAULT_RPC_ENDPOINT,
-  },
-}
+export const resetLiquidityBookService = resetSdkClient
 
-let sharedService: LiquidityBookServices | null = null
+export const liquidityBookConfig = sdkClientConfig
 
-export const getLiquidityBookService = (config?: ILiquidityBookConfig) => {
-  if (config) {
-    return new LiquidityBookServices(config)
-  }
-
-  if (!sharedService) {
-    sharedService = new LiquidityBookServices(DEFAULT_CONFIG)
-  }
-
-  return sharedService
-}
-
-export const resetLiquidityBookService = () => {
-  sharedService = null
-}
-
-export const liquidityBookConfig = Object.freeze({
-  DEFAULT_RPC_ENDPOINT,
-  DEFAULT_CONFIG,
-})
-
-export type { LiquidityBookServices }
+export type { LiquidityBookServices } from '../types/sdk'

@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/u
 import DappSelector, { type DappOption } from './DappSelector';
 import SarosAction from '@/modules/saros/components/SarosAction';
 import { useDappStore, type SupportedDapp } from '@/store/dappStore';
+import { useSarosDataStore } from '@/modules/saros/state';
 import { WalletButton } from './WalletButton';
 
 interface Pool {
@@ -77,7 +78,7 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
     const [showSimulation, setShowSimulation] = useState(false);
     const selectedDapp = useDappStore((state) => state.selectedDapp);
     const setSelectedDapp = useDappStore((state) => state.setSelectedDapp);
-    const triggerSarosFetch = useDappStore((state) => state.fetchSarosData);
+    const triggerSarosFetch = useSarosDataStore((state) => state.fetchPools);
 
     const dapps: DappOption[] = [
         { id: 'saros', name: 'Saros', iconSrc: '/saros/SAROS_Mark_Purple.png' },
@@ -92,7 +93,7 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
 
     useEffect(() => {
         if (selectedDapp === 'saros') {
-            void triggerSarosFetch();
+            void triggerSarosFetch({ force: true });
         }
     }, [selectedDapp, triggerSarosFetch]);
     return (

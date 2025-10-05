@@ -11,7 +11,7 @@ import {
   Cell,
   Brush,
 } from 'recharts'
-import type { SarosBinLiquidityPoint } from '../services/poolService'
+import type { SarosBinLiquidityPoint } from '../types/domain'
 
 interface BinChartProps {
   binData: SarosBinLiquidityPoint[]

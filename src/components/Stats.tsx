@@ -13,11 +13,13 @@ import {
 } from 'recharts';
 import type { TooltipProps } from 'recharts';
 import type { NameType, ValueType } from 'recharts/types/component/DefaultTooltipContent';
+import { getPriceFromId } from '@saros-finance/dlmm-sdk/utils/price';
 import { Card } from './ui/card';
 import { useDappStore } from '@/store/dappStore';
-import { useFetchPoolMetadata } from '@/modules/saros/hooks/useFetchPoolMetadata';
-import { useFetchOverviewChart } from '@/modules/saros/hooks/useFetchOverviewChart';
-import { useFetchBinDistribution } from '@/modules/saros/hooks/useFetchBinDistribution';
+import { useSarosDataStore } from '@/modules/saros/state';
+import { useSarosPoolMetadata } from '@/modules/saros/hooks/useFetchPoolMetadata';
+import { useSarosOverviewChart } from '@/modules/saros/hooks/useFetchOverviewChart';
+import { useSarosBinDistribution } from '@/modules/saros/hooks/useFetchBinDistribution';
 
 interface Pool {
     pair: string;
@@ -69,26 +71,27 @@ const formatPercent = (value?: number | null) => {
 
 const Stats: React.FC<StatsProps> = ({ selectedPool, currentPool, chartData }) => {
     const selectedDapp = useDappStore((state) => state.selectedDapp);
-    const sarosState = useDappStore((state) => state.saros);
+    const sarosState = useSarosDataStore((state) => state.data);
     const isSaros = selectedDapp === 'saros';
 
     const activeSarosPool = sarosState.selectedPool ?? null;
     const sarosPoolAddress = isSaros && activeSarosPool ? activeSarosPool.pairs[0]?.pair : undefined;
     const {
-        price,
-        baseAmount,
-        quoteAmount,
-        totalValueQuote,
+        snapshot: sarosSnapshot,
         isLoading: sarosMetadataLoading,
         error: sarosMetadataError,
-    } = useFetchPoolMetadata(sarosPoolAddress);
+    } = useSarosPoolMetadata({ poolAddress: sarosPoolAddress, enabled: Boolean(sarosPoolAddress) });
+
+    const baseAmount = sarosSnapshot?.baseReserve ?? null;
+    const quoteAmount = sarosSnapshot?.quoteReserve ?? null;
+    const totalValueQuote = sarosSnapshot?.totalValueQuote ?? null;
 
     const shouldUseOverviewChart = isSaros && !activeSarosPool;
     const {
         data: sarosOverviewChart,
         isLoading: sarosOverviewChartLoading,
         error: sarosOverviewChartError,
-    } = useFetchOverviewChart({ enabled: shouldUseOverviewChart });
+    } = useSarosOverviewChart({ enabled: shouldUseOverviewChart });
 
     const primaryPair = activeSarosPool?.pairs?.[0];
     const baseTokenDecimals = activeSarosPool?.tokenX.decimals;
@@ -115,11 +118,32 @@ const Stats: React.FC<StatsProps> = ({ selectedPool, currentPool, chartData }) =
         } as const;
     }, [shouldUseOverviewChart, primaryPair, baseTokenDecimals, quoteTokenDecimals]);
 
+    const binDistributionConfig = useMemo(() => {
+        if (!binDistributionParams) {
+            return { enabled: false } as const;
+        }
+        return { ...binDistributionParams, enabled: true } as const;
+    }, [binDistributionParams]);
+
+    const activeBinPrice = useMemo(() => {
+        if (!primaryPair || baseTokenDecimals == null || quoteTokenDecimals == null) {
+            return null;
+        }
+
+        if (!primaryPair.pair || typeof primaryPair.activeBin !== 'number' || typeof primaryPair.binStep !== 'number') {
+            return null;
+        }
+
+        return getPriceFromId(primaryPair.binStep, primaryPair.activeBin, baseTokenDecimals, quoteTokenDecimals);
+    }, [primaryPair, baseTokenDecimals, quoteTokenDecimals]);
+
+    const price = activeBinPrice ?? sarosSnapshot?.price ?? null;
+
     const {
         data: binDistribution,
         isLoading: binDistributionLoading,
         error: binDistributionError,
-    } = useFetchBinDistribution(binDistributionParams);
+    } = useSarosBinDistribution(binDistributionConfig);
 
     const sarosLoading = isSaros && (
         sarosState.isLoading
@@ -168,14 +192,12 @@ const Stats: React.FC<StatsProps> = ({ selectedPool, currentPool, chartData }) =
             return null;
         }
 
-        const priceNumber = price ? Number(price) : undefined;
-
         return {
             pair: `${activeSarosPool.tokenX.symbol}/${activeSarosPool.tokenY.symbol}`,
             apy: formatPercent(activeSarosPool.apr24h),
             tvl: formatCurrency(activeSarosPool.totalLiquidity),
             fee: '—',
-            currentPrice: priceNumber ?? 0,
+            currentPrice: price ?? 0,
             priceChange24h: '—',
             volume24h: formatCurrency(activeSarosPool.volume24h),
             high24h: '—',

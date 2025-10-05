@@ -9,7 +9,8 @@ import {
   TableRow,
   TableCell,
 } from '@/components/ui/table'
-import { useDappStore, type SarosPoolOverview } from '@/store/dappStore'
+import { useSarosDataStore } from '@/modules/saros/state'
+import type { SarosPoolOverview } from '@/modules/saros/types/domain'
 
 interface SarosDiscoverProps {
   onSelect?: (pool: SarosPoolOverview) => void
@@ -26,8 +27,8 @@ const formatNumber = (value: number) => {
 const SarosDiscover = ({ onSelect }: SarosDiscoverProps) => {
   const [keyword, setKeyword] = useState('')
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
-  const saros = useDappStore((state) => state.saros)
-  const fetchSarosData = useDappStore((state) => state.fetchSarosData)
+  const saros = useSarosDataStore((state) => state.data)
+  const fetchSarosData = useSarosDataStore((state) => state.fetchPools)
 
   const filteredPools = useMemo(() => {
     const data = saros.pools

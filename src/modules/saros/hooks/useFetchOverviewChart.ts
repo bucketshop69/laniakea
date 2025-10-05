@@ -1,43 +1,57 @@
 import { useEffect, useRef, useState } from 'react'
-import { fetchSarosOverviewChart, type SarosOverviewChartPoint } from '../services/poolService'
-
-type ChartState = {
-  data: SarosOverviewChartPoint[]
-  isLoading: boolean
-  error: string | null
-}
+import { fetchSarosOverviewChart } from '../services/pools'
+import type { SarosOverviewChartPoint } from '../types/domain'
 
 interface Options {
   enabled?: boolean
   days?: number
 }
 
-export const useFetchOverviewChart = ({ enabled = true, days }: Options = {}) => {
-  const [state, setState] = useState<ChartState>({ data: [], isLoading: false, error: null })
+interface OverviewChartResult {
+  data: SarosOverviewChartPoint[]
+  isLoading: boolean
+  error: string | null
+  refetch: () => Promise<SarosOverviewChartPoint[] | null>
+}
+
+export const useSarosOverviewChart = ({ enabled = true, days }: Options = {}): OverviewChartResult => {
+  const [data, setData] = useState<SarosOverviewChartPoint[]>([])
+  const [isLoading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const mountedRef = useRef(true)
 
   useEffect(() => {
     mountedRef.current = true
 
     if (!enabled) {
-      setState({ data: [], isLoading: false, error: null })
+      setData([])
+      setLoading(false)
+      setError(null)
       return () => {
         mountedRef.current = false
       }
     }
 
-    setState((prev) => ({ ...prev, isLoading: true, error: null }))
+    setLoading(true)
+    setError(null)
 
     void fetchSarosOverviewChart({ days })
       .then((data) => {
         if (mountedRef.current) {
-          setState({ data, isLoading: false, error: null })
+          setData(data)
+          setError(null)
         }
       })
       .catch((error) => {
         const message = error instanceof Error ? error.message : 'Failed to load Saros chart data'
         if (mountedRef.current) {
-          setState({ data: [], isLoading: false, error: message })
+          setData([])
+          setError(message)
+        }
+      })
+      .finally(() => {
+        if (mountedRef.current) {
+          setLoading(false)
         }
       })
 
@@ -46,7 +60,34 @@ export const useFetchOverviewChart = ({ enabled = true, days }: Options = {}) =>
     }
   }, [enabled, days])
 
-  return state
+  const refetch = async () => {
+    if (!enabled) {
+      setData([])
+      return null
+    }
+
+    try {
+      setLoading(true)
+      setError(null)
+      const result = await fetchSarosOverviewChart({ days })
+      setData(result)
+      return result
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load Saros chart data'
+      setError(message)
+      setData([])
+      return null
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return {
+    data,
+    isLoading,
+    error,
+    refetch,
+  }
 }
 
-export default useFetchOverviewChart
+export default useSarosOverviewChart

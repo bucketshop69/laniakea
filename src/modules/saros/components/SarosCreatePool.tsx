@@ -1,39 +1,60 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useWallet } from '@solana/wallet-adapter-react'
 import { useWalletModal } from '@solana/wallet-adapter-react-ui'
-import { AlertCircle, Loader2, Info } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Card } from '@/components/ui/card'
-import { createSarosPool } from '../services/poolService'
+import { createSarosPool } from '../services/liquidity'
 import { getLiquidityBookService } from '../lib/liquidityBook'
-import TokenSelector from './TokenSelector'
 import { checkPoolExists, type SarosToken, type ExistingPool } from '../services/tokenService'
-
-const binStepOptions = [
-  { binStep: 1, label: '0.01% - Ultra stable', fee: '0.01%' },
-  { binStep: 2, label: '0.02% - Very stable', fee: '0.02%' },
-  { binStep: 5, label: '0.05% - Stable (Base Fee)', fee: '5%' },
-  { binStep: 10, label: '0.10% - Standard', fee: '0.10%' },
-  { binStep: 20, label: '0.20% - Medium', fee: '0.20%' },
-  { binStep: 50, label: '0.50% - High', fee: '0.50%' },
-  { binStep: 100, label: '1.00% - Very high', fee: '1.00%' },
-  { binStep: 200, label: '2.00% - Extreme', fee: '2.00%' },
-]
+import { useSarosStore } from '../state'
+import CreateTokenPairSection from './create/CreateTokenPairSection'
+import CreateFeeTierSelector from './create/CreateFeeTierSelector'
+import CreateExistingPoolsNotice from './create/CreateExistingPoolsNotice'
+import CreatePriceInput from './create/CreatePriceInput'
+import CreateStatusMessages from './create/CreateStatusMessages'
 
 const SarosCreatePool = () => {
   const { publicKey, connected, signTransaction } = useWallet()
   const { setVisible: setWalletModalVisible } = useWalletModal()
 
-  const [baseToken, setBaseToken] = useState<SarosToken | null>(null)
-  const [quoteToken, setQuoteToken] = useState<SarosToken | null>(null)
-  const [selectedBinStep, setSelectedBinStep] = useState(5) // Default to base fee 5%
-  const [ratePriceInput, setRatePriceInput] = useState('')
+  const createForm = useSarosStore((state) => state.createForm)
+  const updateCreateForm = useSarosStore((state) => state.updateCreateForm)
+  const resetCreateForm = useSarosStore((state) => state.resetCreateForm)
+  const setActiveView = useSarosStore((state) => state.setActiveView)
+  const setSelectedPoolAddress = useSarosStore((state) => state.setSelectedPoolAddress)
+
+  const baseToken = createForm.baseToken
+  const quoteToken = createForm.quoteToken
+  const selectedBinStep = createForm.selectedBinStep
+  const ratePriceInput = createForm.ratePriceInput
   const [isCreating, setIsCreating] = useState(false)
   const [isCheckingPool, setIsCheckingPool] = useState(false)
   const [existingPools, setExistingPools] = useState<ExistingPool[]>([])
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [isRatePriceDirty, setIsRatePriceDirty] = useState(false)
+
+  const handleSelectBaseToken = (token: SarosToken) => {
+    updateCreateForm({ baseToken: token })
+  }
+
+  const handleSelectQuoteToken = (token: SarosToken) => {
+    updateCreateForm({ quoteToken: token })
+  }
+
+  const handleBinStepChange = (value: number) => {
+    updateCreateForm({ selectedBinStep: value })
+  }
+
+  const handleRatePriceChange = (value: string) => {
+    setIsRatePriceDirty(true)
+    updateCreateForm({ ratePriceInput: value })
+  }
+
+  useEffect(() => {
+    setActiveView('create')
+    setSelectedPoolAddress(null)
+  }, [setActiveView, setSelectedPoolAddress])
 
   // Auto-calculate initial price from base to quote
   const calculatedPrice = useMemo(() => {
@@ -50,14 +71,25 @@ const SarosCreatePool = () => {
     return basePrice / quotePrice
   }, [baseToken, quoteToken])
 
-  // Auto-populate price input when calculated price changes
   useEffect(() => {
-    if (calculatedPrice !== null) {
-      setRatePriceInput(calculatedPrice.toFixed(8))
-    } else {
-      setRatePriceInput('')
+    setIsRatePriceDirty(false)
+  }, [baseToken?.address, quoteToken?.address])
+
+  // Auto-populate price input when calculated price changes and user hasn't overridden it
+  useEffect(() => {
+    if (isRatePriceDirty) {
+      return
     }
-  }, [calculatedPrice])
+
+    if (calculatedPrice !== null) {
+      const formatted = calculatedPrice.toFixed(8)
+      if (ratePriceInput !== formatted) {
+        updateCreateForm({ ratePriceInput: formatted })
+      }
+    } else if (ratePriceInput !== '') {
+      updateCreateForm({ ratePriceInput: '' })
+    }
+  }, [calculatedPrice, isRatePriceDirty, ratePriceInput, updateCreateForm])
 
   // Check for existing pools whenever tokens change
   useEffect(() => {
@@ -186,10 +218,8 @@ const SarosCreatePool = () => {
       setSuccessMessage(`Pool created successfully! Transaction: ${signature}`)
 
       // Reset form
-      setBaseToken(null)
-      setQuoteToken(null)
-      setSelectedBinStep(5)
-      setRatePriceInput('')
+      resetCreateForm()
+      setIsRatePriceDirty(false)
     } catch (err) {
       console.error('Create pool error:', err)
       setErrorMessage(err instanceof Error ? err.message : 'Failed to create pool')
@@ -207,142 +237,37 @@ const SarosCreatePool = () => {
       </div>
 
       <div className="space-y-4">
-        {/* Token Selection - 6 cols each */}
-        <div className="grid grid-cols-12 gap-4">
-          <div className="col-span-6">
-            <TokenSelector
-              label="Base Token"
-              selectedToken={baseToken}
-              onSelect={setBaseToken}
-              disabled={isCreating}
-            />
-          </div>
-          <div className="col-span-6">
-            <TokenSelector
-              label="Quote Token"
-              selectedToken={quoteToken}
-              onSelect={setQuoteToken}
-              disabled={isCreating}
-            />
-          </div>
-        </div>
+        <CreateTokenPairSection
+          baseToken={baseToken}
+          quoteToken={quoteToken}
+          onSelectBase={handleSelectBaseToken}
+          onSelectQuote={handleSelectQuoteToken}
+          disabled={isCreating}
+        />
 
-        {/* Bin Step Selection - 3 per row, 4 cols each */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-primary">Fee Tier (Bin Step)</label>
-          <div className="grid grid-cols-12 gap-1">
-            {binStepOptions.map((option) => (
-              <label
-                key={option.binStep}
-                className={`col-span-4 flex items-center gap-2 rounded-lg border p-1 cursor-pointer transition-colors ${selectedBinStep === option.binStep
-                  ? 'border-primary bg-primary/5'
-                  : 'border-border hover:border-primary/50'
-                  }`}
-              >
-                <input
-                  type="radio"
-                  name="binStep"
-                  value={option.binStep}
-                  checked={selectedBinStep === option.binStep}
-                  onChange={(e) => setSelectedBinStep(Number(e.target.value))}
-                  disabled={isCreating}
-                  className="shrink-0"
-                />
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium text-primary truncate">
-                    {option.label}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    Fee: {option.fee}
-                  </div>
-                </div>
-              </label>
-            ))}
-          </div>
-        </div>
+        <CreateFeeTierSelector
+          selectedBinStep={selectedBinStep}
+          onSelect={handleBinStepChange}
+          disabled={isCreating}
+        />
 
-        {/* Existing Pools Warning */}
-        {isCheckingPool && baseToken && quoteToken && (
-          <Card className="border-blue-500/50 bg-blue-500/10 p-3">
-            <div className="flex items-start gap-2">
-              <Loader2 className="h-5 w-5 text-blue-500 mt-0.5 shrink-0 animate-spin" />
-              <p className="text-sm text-blue-500">Checking for existing pools...</p>
-            </div>
-          </Card>
-        )}
+        <CreateExistingPoolsNotice
+          isChecking={isCheckingPool}
+          baseToken={baseToken}
+          quoteToken={quoteToken}
+          pools={existingPools}
+        />
 
-        {existingPools.length > 0 && (
-          <Card className="border-yellow-500/50 bg-yellow-500/10 p-3">
-            <div className="flex items-start gap-2">
-              <Info className="h-5 w-5 text-yellow-500 mt-0.5 shrink-0" />
-              <div className="flex-1 space-y-2">
-                <p className="text-sm font-medium text-yellow-500">
-                  {existingPools.length} pool{existingPools.length > 1 ? 's' : ''} already exist for this token pair
-                </p>
-                <div className="space-y-2">
-                  {existingPools.map((pool) => (
-                    <div key={pool._id} className="text-xs text-muted-foreground bg-background/50 rounded p-2">
-                      <div className="font-medium">
-                        {pool.tokenX.symbol?.toUpperCase() || 'TOKEN'} / {pool.tokenY.symbol?.toUpperCase() || 'TOKEN'}
-                      </div>
-                      <div className="mt-1">Bin Step: {pool.binStep} ({(pool.binStep / 100).toFixed(2)}%)</div>
-                      <div className="mt-1 font-mono text-[10px] truncate">Pool: {pool.pair}</div>
-                    </div>
-                  ))}
-                </div>
-                <p className="text-xs text-yellow-500">
-                  Consider using an existing pool or choose a different bin step if you want to create a new one.
-                </p>
-              </div>
-            </div>
-          </Card>
-        )}
+        <CreatePriceInput
+          value={ratePriceInput}
+          onChange={handleRatePriceChange}
+          disabled={isCreating}
+          baseToken={baseToken}
+          quoteToken={quoteToken}
+          isAutoCalculated={calculatedPrice !== null}
+        />
 
-        {/* Initial Price - Auto-populated but editable */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-primary">
-            Initial Price {calculatedPrice && '(Auto-calculated - Editable)'}
-          </label>
-          <Input
-            type="number"
-            placeholder="Enter price or select tokens to auto-calculate"
-            value={ratePriceInput}
-            onChange={(e) => setRatePriceInput(e.target.value)}
-            disabled={isCreating}
-            step="0.00000001"
-            min="0"
-          />
-          {baseToken && quoteToken && baseToken.symbol && quoteToken.symbol && (
-            <p className="text-xs text-muted-foreground">
-              1 {baseToken.symbol?.toUpperCase() || 'BASE'} = {ratePriceInput || '?'}{' '}
-              {quoteToken.symbol?.toUpperCase() || 'QUOTE'}
-              <br />
-              Based on current market prices: {baseToken.symbol.toUpperCase()} ($
-              {parseFloat(baseToken.current_price).toFixed(6)}) / {quoteToken.symbol.toUpperCase()}{' '}
-              (${parseFloat(quoteToken.current_price).toFixed(6)})
-            </p>
-          )}
-        </div>
-
-        {/* Error Message */}
-        {errorMessage && (
-          <Card className="border-red-500/50 bg-red-500/10 p-3">
-            <div className="flex items-start gap-2">
-              <AlertCircle className="h-5 w-5 text-red-500 mt-0.5 shrink-0" />
-              <p className="text-sm text-red-500">{errorMessage}</p>
-            </div>
-          </Card>
-        )}
-
-        {/* Success Message */}
-        {successMessage && (
-          <Card className="border-green-500/50 bg-green-500/10 p-3">
-            <div className="flex items-start gap-2">
-              <AlertCircle className="h-5 w-5 text-green-500 mt-0.5 shrink-0" />
-              <p className="text-sm text-green-500 break-all">{successMessage}</p>
-            </div>
-          </Card>
-        )}
+        <CreateStatusMessages errorMessage={errorMessage} successMessage={successMessage} />
 
         {/* Create Button or Connect Wallet */}
         {!connected ? (

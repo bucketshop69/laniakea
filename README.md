@@ -73,3 +73,56 @@ When adding a new dapp:
 - [ ] Identify all user data points for the Profile module  
 - [ ] Define relevant notifications and feeds for the Feed module
 - [ ] Ensure consistent styling and interaction patterns
+
+## Saros Module Folder Structure (Phase 5)
+
+```
+src/modules/saros/
+├── components/
+│   ├── BinChart.tsx
+│   ├── SarosAction.tsx
+│   ├── SarosActionRail.tsx
+│   ├── SarosCreatePool.tsx
+│   ├── SarosDiscover.tsx
+│   ├── SarosManage.tsx
+│   ├── TokenSelector.tsx
+│   ├── create/
+│   │   ├── CreateExistingPoolsNotice.tsx
+│   │   ├── CreateFeeTierSelector.tsx
+│   │   ├── CreatePriceInput.tsx
+│   │   ├── CreateStatusMessages.tsx
+│   │   └── CreateTokenPairSection.tsx
+│   └── manage/
+│       ├── AddLiquidityForm.tsx
+│       ├── ManageHeader.tsx
+│       └── RemoveLiquidityPanel.tsx
+├── hooks/
+│   ├── queryKeys.ts
+│   ├── useFetchBinDistribution.ts
+│   ├── useFetchOverviewChart.ts
+│   └── useFetchPoolMetadata.ts
+├── lib/
+│   └── liquidityBook.ts
+├── services/
+│   ├── liquidity.ts
+│   ├── pools.ts
+│   ├── positions.ts
+│   ├── sdkClient.ts
+│   ├── shared.ts
+│   ├── tokenService.ts
+│   └── poolService.ts (legacy re-exports)
+├── state/
+│   ├── index.ts
+│   ├── sarosDataStore.ts
+│   └── sarosStore.ts
+├── types/
+│   ├── domain.ts
+│   └── sdk.ts
+└── utils/
+    ├── index.ts
+    ├── logger.ts
+    ├── math.ts
+    └── price.ts
+```
+
+All Saros-specific hooks, services, and state live within `src/modules/saros/...` so additional dapps can plug in their own module-local implementations without polluting the global `src/` namespace.
