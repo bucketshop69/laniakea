@@ -47,7 +47,7 @@ const SarosCreatePool = () => {
       return null
     }
 
-    return quotePrice / basePrice
+    return basePrice / quotePrice
   }, [baseToken, quoteToken])
 
   // Auto-populate price input when calculated price changes
