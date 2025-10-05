@@ -74,7 +74,7 @@ When adding a new dapp:
 - [ ] Define relevant notifications and feeds for the Feed module
 - [ ] Ensure consistent styling and interaction patterns
 
-## Saros Module Folder Structure (Phase 5)
+## Saros Module Folder Structure
 
 ```
 src/modules/saros/
