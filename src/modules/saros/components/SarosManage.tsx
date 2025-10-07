@@ -5,7 +5,7 @@ import { useSarosBinDistribution } from '../hooks/useFetchBinDistribution'
 import { LiquidityShape, RemoveLiquidityType } from '@saros-finance/dlmm-sdk/types/services'
 import { useWallet } from '@solana/wallet-adapter-react'
 import { useWalletModal } from '@solana/wallet-adapter-react-ui'
-import { PublicKey, Transaction as Web3Transaction, Keypair } from '@solana/web3.js'
+import { PublicKey, Transaction as Web3Transaction, Keypair, LAMPORTS_PER_SOL } from '@solana/web3.js'
 import { createUniformDistribution, getMaxBinArray } from '@saros-finance/dlmm-sdk/utils'
 import { getIdFromPrice, getPriceFromId } from '@saros-finance/dlmm-sdk/utils/price'
 import { BIN_ARRAY_SIZE } from '@saros-finance/dlmm-sdk/constants'
@@ -366,6 +366,20 @@ const SarosManage = ({ onBack }: SarosManageProps) => {
     return value.toLocaleString(undefined, { maximumFractionDigits: 2 })
   }, [])
 
+  useEffect(() => {
+    if (!successMessage) {
+      return
+    }
+
+    const timeoutId = setTimeout(() => {
+      setSuccessMessage(null)
+    }, 30000)
+
+    return () => {
+      clearTimeout(timeoutId)
+    }
+  }, [successMessage])
+
   const toBigIntSafe = useCallback((value: unknown): bigint => {
     if (typeof value === 'bigint') return value
     if (typeof value === 'number' && Number.isFinite(value)) {
@@ -522,7 +536,7 @@ const SarosManage = ({ onBack }: SarosManageProps) => {
 
     try {
       const service = getLiquidityBookService()
-      const connection = service.connection
+      const lbConnection = service.connection
 
       const pairKey = new PublicKey(poolAddress)
       const pairAccount = await getSarosPairAccount(poolAddress)
@@ -597,7 +611,7 @@ const SarosManage = ({ onBack }: SarosManageProps) => {
           transaction: createPositionTx as any,
         })
 
-        const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed')
+        const { blockhash, lastValidBlockHeight } = await lbConnection.getLatestBlockhash('confirmed')
         createPositionTx.recentBlockhash = blockhash
         createPositionTx.feePayer = publicKey
         createPositionTx.partialSign(positionMint)
@@ -640,7 +654,7 @@ const SarosManage = ({ onBack }: SarosManageProps) => {
         binArrayUpper,
       })
 
-      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed')
+      const { blockhash, lastValidBlockHeight } = await lbConnection.getLatestBlockhash('confirmed')
       addLiquidityTx.recentBlockhash = blockhash
       addLiquidityTx.feePayer = publicKey
       if (positionMintKeypair) {
@@ -664,15 +678,24 @@ const SarosManage = ({ onBack }: SarosManageProps) => {
         throw new Error('Connected wallet does not support transaction signing')
       }
 
+      if (positionMintKeypair) {
+        for (const tx of signedTxs) {
+          const signerEntry = tx.signatures.find((entry) => entry.publicKey.equals(positionMintKeypair.publicKey))
+          if (signerEntry && !signerEntry.signature) {
+            tx.partialSign(positionMintKeypair)
+          }
+        }
+      }
+
       const signatures: string[] = []
       for (const signedTx of signedTxs) {
-        const signature = await connection.sendRawTransaction(signedTx.serialize(), {
+        const signature = await lbConnection.sendRawTransaction(signedTx.serialize(), {
           skipPreflight: false,
           preflightCommitment: 'confirmed',
         })
         signatures.push(signature)
 
-        await connection.confirmTransaction(
+        await lbConnection.confirmTransaction(
           { signature, blockhash, lastValidBlockHeight },
           'finalized'
         )
@@ -681,6 +704,11 @@ const SarosManage = ({ onBack }: SarosManageProps) => {
       setSuccessMessage(`Liquidity added successfully! Signature: ${signatures[signatures.length - 1]}`)
       updateForm({ baseAmountInput: '', quoteAmountInput: '' })
       setPositionsRefreshNonce((nonce) => nonce + 1)
+
+      const mintAddresses = [baseMint, quoteMint].filter((mint): mint is string => Boolean(mint))
+      if (mintAddresses.length > 0) {
+        void refreshBalances(connection, publicKey, mintAddresses, { force: true })
+      }
     } catch (err) {
       console.error('Add liquidity error:', err)
       setErrorMessage(err instanceof Error ? err.message : 'Failed to add liquidity')
@@ -808,6 +836,23 @@ const SarosManage = ({ onBack }: SarosManageProps) => {
         tx.recentBlockhash = blockhash
         tx.lastValidBlockHeight = lastValidBlockHeight
         tx.feePayer = publicKey
+      }
+
+      try {
+        const feePromises = transactions.map(async (tx) => {
+          const message = tx.compileMessage()
+          const fee = await serviceConnection.getFeeForMessage(message as any, 'confirmed')
+          return fee?.value ?? 0
+        })
+        const feesLamports = await Promise.all(feePromises)
+        const totalLamports = feesLamports.reduce((acc, fee) => acc + fee, 0)
+        console.log('[Saros Manage] Estimated remove liquidity network fee', {
+          totalLamports,
+          totalSol: totalLamports / LAMPORTS_PER_SOL,
+          feesLamports,
+        })
+      } catch (feeError) {
+        console.warn('[Saros Manage] Unable to estimate remove liquidity fee', feeError)
       }
 
       let signedTxs: Web3Transaction[]
