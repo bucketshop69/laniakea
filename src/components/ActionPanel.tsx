@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 import DappSelector, { type DappOption } from './DappSelector';
 import SarosAction from '@/modules/saros/components/SarosAction';
+import DriftAction from '@/modules/drift/components/DriftAction';
 import { useDappStore, type SupportedDapp } from '@/store/dappStore';
 import { useSarosDataStore } from '@/modules/saros/state';
 import { WalletButton } from './WalletButton';
@@ -82,7 +83,8 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
 
     const dapps: DappOption[] = [
         { id: 'saros', name: 'Saros', iconSrc: '/saros/SAROS_Mark_Purple.png' },
-        // { id: 'meteora', name: 'Meteora', iconSrc: '/meteora/meteora.png' }
+        { id: 'meteora', name: 'Meteora', iconSrc: '/meteora/meteora.png' },
+        { id: 'drift', name: 'Drift', iconSrc: '/drift/drift-logo.svg' },
     ];
 
     const currentPool = pools.find(p => p.pair === selectedPool) || pools[0];
@@ -122,6 +124,8 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
                     <TabsContent value="manage" className="flex-1 px-1">
                         {selectedDapp === 'saros' ? (
                             <SarosAction />
+                        ) : selectedDapp === 'drift' ? (
+                            <DriftAction />
                         ) : (
                             <>
                                 {/* Pool Selector */}
