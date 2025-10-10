@@ -29,6 +29,7 @@ export const useDriftMarketDiscovery = () => {
   const upsertSnapshot = useDriftMarketsStore((state) => state.upsertSnapshot)
   const patchSnapshot = useDriftMarketsStore((state) => state.patchSnapshot)
   const resetSnapshots = useDriftMarketsStore((state) => state.resetSnapshots)
+  const selectedMarketIndex = useDriftMarketsStore((state) => state.selectedMarketIndex)
 
   const refreshTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const walletPublicKey = wallet.publicKey?.toBase58() ?? null
@@ -199,14 +200,17 @@ export const useDriftMarketDiscovery = () => {
       patchSnapshot(marketIndex, patch)
     }
 
-    markets.forEach((market) => {
-      const unsubscribe = dlobWebsocketService.subscribeOrderbook({
-        market: market.symbol,
-        marketType: 'perp',
-        handler: handleOrderbook(market.marketIndex),
-      })
-      subscriptions.push(unsubscribe)
-    })
+    if (selectedMarketIndex !== null) {
+      const selected = markets.find((m) => m.marketIndex === selectedMarketIndex)
+      if (selected) {
+        const unsubscribe = dlobWebsocketService.subscribeOrderbook({
+          market: selected.symbol,
+          marketType: 'perp',
+          handler: handleOrderbook(selected.marketIndex),
+        })
+        subscriptions.push(unsubscribe)
+      }
+    }
 
     const connectionUnsubscribe = dlobWebsocketService.onConnection((event) => {
       if (event.state === 'reconnecting') {
@@ -233,7 +237,7 @@ export const useDriftMarketDiscovery = () => {
         }
       })
     }
-  }, [env, markets, patchSnapshot])
+  }, [env, markets, patchSnapshot, selectedMarketIndex])
 
   useEffect(() => {
     return () => {
