@@ -10,7 +10,6 @@ import {
   TableCell,
 } from '@/components/ui/table'
 import { useDriftMarketsStore } from '../state'
-import { useDriftMarketDiscovery } from '../hooks/useDriftMarketDiscovery'
 import { cn } from '@/lib/utils'
 
 const formatNumber = (value: number) => {
@@ -34,7 +33,6 @@ const formatPercent = (value: number | undefined) => {
 
 
 const DriftMarketDiscovery = () => {
-  useDriftMarketDiscovery()
   const [keyword, setKeyword] = useState('')
 
   const markets = useDriftMarketsStore((state) => state.markets)
