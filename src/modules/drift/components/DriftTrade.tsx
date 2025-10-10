@@ -40,6 +40,7 @@ const DriftTrade = () => {
   const [size, setSize] = useState('');
   const [limitPrice, setLimitPrice] = useState('');
   const [leverage, setLeverage] = useState(5);
+  const [sizeMode, setSizeMode] = useState<'asset' | 'usdc'>('asset');
 
   // Mock position data - will be replaced with real data
   const hasPosition = true;
@@ -150,12 +151,12 @@ const DriftTrade = () => {
       </div>
 
       {/* Trade Form */}
-      <Card className="flex-1 rounded-lg border-border/40 p-3 overflow-y-auto">
+      <div className="mt-1">
         <div className="space-y-3">
 
           {/* Order Type (Select) + Leverage Slider */}
           <div className="grid grid-cols-12 gap-2">
-            <div className="col-span-4">
+            <div className="col-span-3">
               <Select value={orderType} onValueChange={(value: OrderType) => setOrderType(value)}>
                 <SelectTrigger className="w-full h-10">
                   <SelectValue placeholder="Order Type" />
@@ -167,74 +168,110 @@ const DriftTrade = () => {
               </Select>
             </div>
 
-            <div className="col-span-8 flex items-center gap-2">
-              <label className="text-xs text-muted-foreground whitespace-nowrap">Leverage</label>
-              <input
-                type="range"
-                min={1}
-                max={10}
-                step={1}
-                value={leverage}
-                onChange={(e) => setLeverage(parseInt(e.target.value))}
-                className="flex-1 h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-blue"
-              />
-              <span className="text-sm font-bold text-primary min-w-[30px]">{leverageValue}x</span>
+            <div className="col-span-9">
+              <label className="text-xs text-muted-foreground">Leverage</label>
+              <div className="flex items-center gap-1">
+                <input
+                  type="range"
+                  min={1}
+                  max={10}
+                  step={1}
+                  value={leverage}
+                  onChange={(e) => setLeverage(parseInt(e.target.value))}
+                  className="flex-1 h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-blue"
+                />
+                <Input
+                  type="number"
+                  min={1}
+                  max={10}
+                  value={leverage}
+                  onChange={(e) => setLeverage(parseInt(e.target.value) || 1)}
+                  className="w-16 h-8 text-center text-sm"
+                />
+              </div>
             </div>
           </div>
 
-          {/* Limit Price (conditional) */}
-          {orderType === 'limit' && (
-            <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">Limit Price</label>
-              <div className="relative">
+          {/* Limit Price + Percentage Buttons Row */}
+          <div className="grid grid-cols-12 gap-2 mb-1">
+            {/* Limit Price Input - 3 cols (conditional) */}
+            {orderType === 'limit' ? (
+              <div className="col-span-3">
                 <Input
                   type="number"
-                  placeholder="0.00"
+                  placeholder="Limit Price"
                   value={limitPrice}
                   onChange={(e) => setLimitPrice(e.target.value)}
-                  className="pr-12 text-sm"
+                  className="h-8 text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                  USD
-                </span>
               </div>
-            </div>
-          )}
+            ) : (
+              <div className="col-span-3"></div>
+            )}
 
-          {/* Size Input */}
-          <div className="space-y-1">
-            <label className="text-xs text-muted-foreground">Size</label>
+            {/* Empty space - 5 cols */}
+            <div className="col-span-3"></div>
+
+            {/* Percentage Buttons - 4 cols (always visible on right) */}
+            <div className="col-span-6 flex gap-1">
+              {['10%', '25%', '50%', '75%', '100%'].map((percent) => (
+                <button
+                  key={percent}
+                  type="button"
+                  className="p-1 flex-1 h-8 text-xs font-medium rounded-md 
+                  border border-input bg-background hover:bg-accent 
+                  hover:text-accent-foreground transition-colors"
+                  onClick={() => {
+                    // Handle percentage click
+                    console.log(`${percent} clicked`);
+                  }}
+                >
+                  {percent}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Size/Value Input */}
+          <div className="space-y-1 mx-2">
             <div className="relative">
               <Input
                 type="number"
-                placeholder="0.00"
+                placeholder={sizeMode === 'asset' ? 'Size' : 'Value'}
                 value={size}
                 onChange={(e) => setSize(e.target.value)}
-                className="pr-12 text-sm"
+                className="pr-24 !text-xl h-18 font-medium [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                {selectedMarket?.baseAssetSymbol || 'ETH'}
-              </span>
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 cursor-pointer" onClick={() => setSizeMode(sizeMode === 'asset' ? 'usdc' : 'asset')}>
+                <button
+                  type="button"
+                  className="text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+                  title="Switch between asset and USDC"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M7 16V4M7 4L3 8M7 4l4 4" />
+                    <path d="M17 8v12m0 0l4-4m-4 4l-4-4" />
+                  </svg>
+                </button>
+                <span className="text-lg font-medium text-muted-foreground cursor-pointer">
+                  {sizeMode === 'asset' ? selectedMarket?.baseAssetSymbol || 'ETH' : 'USDC'}
+                </span>
+              </div>
             </div>
             <p className="text-xs text-right text-muted-foreground">
               ≈ ${usdValue.toFixed(2)} USD
             </p>
           </div>
-
-          {/* Trade Button */}
-          <Button
-            type="button"
-            className={cn(
-              'w-full h-10 font-bold',
-              direction === 'long'
-                ? 'bg-emerald-500 hover:bg-emerald-600'
-                : 'bg-red-500 hover:bg-red-600'
-            )}
-            onClick={handleTrade}
-            disabled={!size || parseFloat(size) <= 0}
-          >
-            OPEN {direction.toUpperCase()} POSITION
-          </Button>
 
           {/* Order Summary - Inline 2 rows */}
           <div className="space-y-1 rounded-lg border border-border/40 bg-muted/20 p-2 text-xs">
@@ -250,21 +287,28 @@ const DriftTrade = () => {
             </div>
           </div>
 
-          {/* Risk Warning */}
-          <div className="rounded-lg border border-orange-500/30 bg-orange-500/5 p-2 flex items-start gap-2">
-            <AlertCircle className="h-3 w-3 flex-shrink-0 text-orange-400 mt-0.5" />
-            <p className="text-xs text-orange-400">
-              Trading perpetuals involves significant risk. You could lose your entire margin.
-            </p>
-          </div>
+          {/* Trade Button */}
+          <Button
+            type="button"
+            className={cn(
+              'w-full h-10 font-bold',
+              direction === 'long'
+                ? 'bg-emerald-500 text-white hover:bg-emerald-600'
+                : 'bg-red-500 text-white hover:bg-red-600'
+            )}
+            onClick={handleTrade}
+            disabled={!size || parseFloat(size) <= 0}
+          >
+            OPEN {direction.toUpperCase()} POSITION
+          </Button>
         </div>
-      </Card>
+      </div>
 
       {/* Position Badge (inline - compact) */}
       {hasPosition && (
         <div
           className={cn(
-            'rounded-lg border px-2 py-1 text-xs flex items-center justify-between',
+            'mt-2 rounded-sm border px-2 py-1 text-xs flex items-center justify-between',
             mockPosition.direction === 'long'
               ? 'border-emerald-500/30 bg-emerald-500/5'
               : 'border-red-500/30 bg-red-500/5'
