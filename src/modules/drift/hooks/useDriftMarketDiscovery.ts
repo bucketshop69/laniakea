@@ -10,8 +10,13 @@ import {
   getDriftEnv,
 } from '../services/driftClientService'
 import { buildAllPerpMarketSnapshots, getPerpMarketIdentities } from '../services/marketDiscoveryService'
+import { dlobWebsocketService, type DlobOrderbookEvent } from '../services/dlobWebsocketService'
+import type { DriftMarketSnapshot } from '../types'
 
 const SNAPSHOT_REFRESH_MS = 60_000
+
+const SUBSCRIPTION_RESYNC_DELAY_MS = 2_000
+const PRICE_SCALE = 1_000_000
 
 export const useDriftMarketDiscovery = () => {
   const wallet = useWallet()
@@ -22,10 +27,12 @@ export const useDriftMarketDiscovery = () => {
   const setMarkets = useDriftMarketsStore((state) => state.setMarkets)
   const setMarketStatus = useDriftMarketsStore((state) => state.setMarketStatus)
   const upsertSnapshot = useDriftMarketsStore((state) => state.upsertSnapshot)
+  const patchSnapshot = useDriftMarketsStore((state) => state.patchSnapshot)
   const resetSnapshots = useDriftMarketsStore((state) => state.resetSnapshots)
 
   const refreshTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const walletPublicKey = wallet.publicKey?.toBase58() ?? null
+  const refreshSnapshotsRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
     setEnv(env)
@@ -63,16 +70,10 @@ export const useDriftMarketDiscovery = () => {
             client,
             markets.map((market) => market.marketIndex)
           )
-          console.log('[Drift] Market snapshots:', snapshots.map(snapshot => ({
-            marketIndex: snapshot.marketIndex,
-            markPrice: snapshot.markPrice,
-            change24hPct: snapshot.change24hPct,
-            fundingRate24hPct: snapshot.fundingRate24hPct,
-            openInterest: snapshot.openInterest,
-            volume24h: snapshot.volume24h
-          })))
           snapshots.forEach((snapshot) => upsertSnapshot(snapshot))
         }
+
+        refreshSnapshotsRef.current = refreshSnapshots
 
         refreshSnapshots()
         tearDownTimer()
@@ -93,6 +94,7 @@ export const useDriftMarketDiscovery = () => {
     return () => {
       cancelled = true
       tearDownTimer()
+      refreshSnapshotsRef.current = null
     }
   }, [
     markets,
@@ -105,6 +107,133 @@ export const useDriftMarketDiscovery = () => {
     resetSnapshots,
     wallet,
   ])
+
+  useEffect(() => {
+    if (markets.length === 0) {
+      return
+    }
+
+    dlobWebsocketService.setEnv(env)
+
+    const subscriptions: Array<() => void> = []
+    let shouldResync = false
+    let resyncTimer: ReturnType<typeof setTimeout> | null = null
+
+    const scheduleResync = () => {
+      if (resyncTimer) {
+        return
+      }
+      resyncTimer = setTimeout(() => {
+        resyncTimer = null
+        refreshSnapshotsRef.current?.()
+      }, SUBSCRIPTION_RESYNC_DELAY_MS)
+    }
+
+    const toPriceNumber = (value: unknown): number | undefined => {
+      if (typeof value === 'number' && Number.isFinite(value)) {
+        return value
+      }
+      if (typeof value === 'string') {
+        const trimmed = value.trim()
+        if (trimmed.length === 0) {
+          return undefined
+        }
+        if (trimmed.includes('.')) {
+          const parsed = Number(trimmed)
+          return Number.isFinite(parsed) ? parsed : undefined
+        }
+        const parsed = Number(trimmed)
+        if (!Number.isFinite(parsed)) {
+          return undefined
+        }
+        const scaled = parsed / PRICE_SCALE
+        return Number.isFinite(scaled) ? scaled : undefined
+      }
+      return undefined
+    }
+
+    const getTopOfBook = (levels: unknown): number | undefined => {
+      if (!Array.isArray(levels) || levels.length === 0) {
+        return undefined
+      }
+      const level = levels[0]
+      if (!level || typeof level !== 'object') {
+        return undefined
+      }
+      const price = (level as { price?: unknown }).price
+      return toPriceNumber(price)
+    }
+
+    const handleOrderbook = (marketIndex: number) => (event: DlobOrderbookEvent) => {
+      const bidsPrice = getTopOfBook(event.payload?.bids)
+      const asksPrice = getTopOfBook(event.payload?.asks)
+      const oraclePrice = toPriceNumber(event.payload?.oracle)
+        ?? toPriceNumber(event.payload?.oracleData?.price)
+
+      const patch: Partial<Omit<DriftMarketSnapshot, 'marketIndex'>> & {
+        lastUpdatedTs: number
+      } = {
+        lastUpdatedTs: event.receivedTs,
+      }
+
+      if (typeof bidsPrice === 'number') {
+        patch.bidPrice = bidsPrice
+      }
+      if (typeof asksPrice === 'number') {
+        patch.askPrice = asksPrice
+      }
+      if (typeof oraclePrice === 'number') {
+        patch.oraclePrice = oraclePrice
+      }
+
+      if (typeof bidsPrice === 'number' && typeof asksPrice === 'number') {
+        patch.markPrice = (bidsPrice + asksPrice) / 2
+      } else if (typeof oraclePrice === 'number') {
+        patch.markPrice = oraclePrice
+      } else if (typeof bidsPrice === 'number') {
+        patch.markPrice = bidsPrice
+      } else if (typeof asksPrice === 'number') {
+        patch.markPrice = asksPrice
+      }
+
+      patchSnapshot(marketIndex, patch)
+    }
+
+    markets.forEach((market) => {
+      const unsubscribe = dlobWebsocketService.subscribeOrderbook({
+        market: market.symbol,
+        marketType: 'perp',
+        handler: handleOrderbook(market.marketIndex),
+      })
+      subscriptions.push(unsubscribe)
+    })
+
+    const connectionUnsubscribe = dlobWebsocketService.onConnection((event) => {
+      if (event.state === 'reconnecting') {
+        shouldResync = true
+      }
+      if (event.state === 'connected' && shouldResync) {
+        shouldResync = false
+        scheduleResync()
+      }
+    })
+
+    subscriptions.push(connectionUnsubscribe)
+
+    return () => {
+      if (resyncTimer) {
+        clearTimeout(resyncTimer)
+        resyncTimer = null
+      }
+      subscriptions.forEach((dispose) => {
+        try {
+          dispose()
+        } catch (error) {
+          console.error('[Drift] failed to dispose DLOB subscription', error)
+        }
+      })
+    }
+  }, [env, markets, patchSnapshot])
 
   useEffect(() => {
     return () => {

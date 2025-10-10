@@ -62,6 +62,10 @@ export interface DriftMarketsActionsSlice {
   setMarketStatus: (status: DriftMarketsStateSlice['marketStatus'], error?: string | null) => void
   selectMarket: (marketIndex: number) => void
   upsertSnapshot: (snapshot: DriftMarketSnapshot) => void
+  patchSnapshot: (
+    marketIndex: number,
+    patch: Partial<Omit<DriftMarketSnapshot, 'marketIndex'>>
+  ) => void
   resetSnapshots: () => void
   setChartResolution: (resolution: CandleResolution) => void
   setChartData: (data: DriftCandlePoint[], lastFetchedTs: number) => void

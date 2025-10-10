@@ -90,12 +90,19 @@ export const buildPerpMarketSnapshot = (
     return null
   }
 
+
   const oracleData = client.getOracleDataForPerpMarket(marketIndex)
+
   const mmOracleData: MMOraclePriceData = {
     ...oracleData,
     isMMOracleActive: true,
   }
 
+  if (marketIndex === 0) {
+    console.log("market Account", marketAccount);
+    console.log(mmOracleData);
+
+  }
   const markPrice = safeConvert(calculateReservePrice(marketAccount, mmOracleData), PRICE_PRECISION)
   const bidPrice = safeConvert(calculateBidPrice(marketAccount, mmOracleData), PRICE_PRECISION)
   const askPrice = safeConvert(calculateAskPrice(marketAccount, mmOracleData), PRICE_PRECISION)

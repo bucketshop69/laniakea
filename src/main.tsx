@@ -7,11 +7,11 @@ import { WalletContextProvider } from './components/WalletProvider'
 import { WalletBalanceProvider } from './components/WalletBalanceProvider'
 
 createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <WalletContextProvider>
-      <WalletBalanceProvider>
-        <App />
-      </WalletBalanceProvider>
-    </WalletContextProvider>
-  </StrictMode>,
+  // <StrictMode>
+  <WalletContextProvider>
+    <WalletBalanceProvider>
+      <App />
+    </WalletBalanceProvider>
+  </WalletContextProvider>
+  // </StrictMode>,
 )

@@ -181,56 +181,6 @@ const Stats: React.FC<StatsProps> = ({ selectedPool, currentPool, chartData }) =
         ?? sarosMetadataError
         ?? (shouldUseOverviewChart ? sarosOverviewChartError : binDistributionError)
         : null;
-
-    const displayMetrics = useMemo(() => {
-        if (isDrift && selectedDriftMarket && selectedDriftSnapshot) {
-            return [
-                {
-                    label: 'Mark Price',
-                    value: formatCurrency(selectedDriftSnapshot.markPrice),
-                },
-                {
-                    label: '24H Change',
-                    value: formatPercent(selectedDriftSnapshot.change24hPct),
-                },
-                {
-                    label: 'Funding Rate',
-                    value: formatPercent(selectedDriftSnapshot.fundingRate24hPct),
-                },
-                {
-                    label: 'Open Interest',
-                    value: formatCurrency(selectedDriftSnapshot.openInterest),
-                },
-            ];
-        }
-
-        if (!isSaros || !activeSarosPool) {
-            return null;
-        }
-
-        return [
-            {
-                label: 'TVL',
-                value: formatCurrency(activeSarosPool.totalLiquidity),
-            },
-            {
-                label: 'Pool Liquidity',
-                value: formatCurrency(totalValueQuote ?? activeSarosPool.totalLiquidity),
-                subLabel: baseAmount !== null && quoteAmount !== null
-                    ? `${baseAmount.toFixed(2)} ${activeSarosPool.tokenX.symbol} • ${quoteAmount.toFixed(2)} ${activeSarosPool.tokenY.symbol}`
-                    : undefined,
-            },
-            {
-                label: 'APR (24h)',
-                value: formatPercent(activeSarosPool.apr24h),
-            },
-            {
-                label: 'Volume (24h)',
-                value: formatCurrency(activeSarosPool.volume24h),
-            },
-        ];
-    }, [isDrift, selectedDriftMarket, selectedDriftSnapshot, isSaros, activeSarosPool, totalValueQuote, baseAmount, quoteAmount]);
-
     const fallbackPoolLabel = selectedPool;
 
     const sarosDisplayPool: Pool | null = useMemo(() => {
@@ -521,15 +471,6 @@ const Stats: React.FC<StatsProps> = ({ selectedPool, currentPool, chartData }) =
             <div className="flex flex-col">
                 {(isSaros || isDrift) && (
                     <div className="mb-4 grid grid-cols-2 gap-2 md:grid-cols-4">
-                        {displayMetrics?.map((metric) => (
-                            <div key={metric.label} className="rounded-lg border border-border/40 bg-card/70 p-3">
-                                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{metric.label}</p>
-                                <p className="mt-1 text-sm font-semibold text-primary">{metric.value}</p>
-                                {metric.subLabel && (
-                                    <p className="mt-1 text-[10px] text-muted-foreground">{metric.subLabel}</p>
-                                )}
-                            </div>
-                        ))}
                         {isSaros && sarosLoading && (
                             <div className="col-span-2 md:col-span-4 rounded-lg border border-dashed border-border/40 p-3 text-sm text-muted-foreground">
                                 Loading Saros statistics…
@@ -575,7 +516,11 @@ const Stats: React.FC<StatsProps> = ({ selectedPool, currentPool, chartData }) =
 
                 <div className="chart-wrapper">
                     {isDrift ? (
-                        <DriftCandlestickChart data={driftChartData} isLoading={driftChartLoading} />
+                        <DriftCandlestickChart
+                            key={selectedDriftMarket?.marketIndex ?? 'drift-chart'}
+                            data={driftChartData}
+                            isLoading={driftChartLoading}
+                        />
                     ) : chartIsLoading ? (
                         <div className="flex h-[320px] items-center justify-center rounded-lg border border-dashed border-border/40 text-sm text-muted-foreground">
                             Loading Saros chart data…

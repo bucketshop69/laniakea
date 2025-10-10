@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
-export type DriftView = 'discover'
+export type DriftView = 'discover' | 'trade' | 'overview'
 
 interface DriftStoreState {
   activeView: DriftView

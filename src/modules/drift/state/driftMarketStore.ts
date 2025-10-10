@@ -43,6 +43,27 @@ export const useDriftMarketsStore = create<DriftMarketsStore>()(
           [snapshot.marketIndex]: snapshot,
         },
       })),
+    patchSnapshot: (marketIndex, patch) =>
+      set((state) => {
+        const existing = state.snapshots[marketIndex]
+        const fallback: DriftMarketSnapshot = existing ?? {
+          marketIndex,
+          lastUpdatedTs: Date.now(),
+        }
+        const next: DriftMarketSnapshot = {
+          ...fallback,
+          ...patch,
+          marketIndex,
+          lastUpdatedTs: patch.lastUpdatedTs ?? Date.now(),
+        }
+
+        return {
+          snapshots: {
+            ...state.snapshots,
+            [marketIndex]: next,
+          },
+        }
+      }),
     resetSnapshots: () => set({ snapshots: {} }),
     setChartResolution: (resolution) =>
       set((state) => ({
