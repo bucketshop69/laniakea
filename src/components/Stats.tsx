@@ -51,6 +51,7 @@ interface StatsProps {
     selectedPool: string;
     currentPool: Pool;
     chartData: ChartDataPoint[];
+    className?: string;
 }
 
 const formatCurrency = (value?: number | null, options: Intl.NumberFormatOptions = {}) => {
@@ -73,7 +74,7 @@ const formatPercent = (value?: number | null) => {
     return `${value.toFixed(2)}%`;
 };
 
-const Stats: React.FC<StatsProps> = ({ selectedPool, currentPool, chartData }) => {
+const Stats: React.FC<StatsProps> = ({ selectedPool, currentPool, chartData, className }) => {
     const selectedDapp = useDappStore((state) => state.selectedDapp);
     const sarosState = useSarosDataStore((state) => state.data);
     const isSaros = selectedDapp === 'saros';
@@ -467,7 +468,7 @@ const Stats: React.FC<StatsProps> = ({ selectedPool, currentPool, chartData }) =
     }, [isSaros, shouldUseOverviewChart, displayChartData, sarosDisplayPool, fallbackPoolLabel, binDistribution]);
 
     return (
-        <Card className="col-start-1 col-span-7 w-full">
+        <Card className={`col-start-1 col-span-7 w-full ${className || ''}`}>
             <div className="flex flex-col">
                 {(isSaros || isDrift) && (
                     <div className="mb-4 grid grid-cols-2 gap-2 md:grid-cols-4">

@@ -99,8 +99,8 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
         }
     }, [selectedDapp, triggerSarosFetch]);
     return (
-        <div className="col-start-8 col-span-5 w-full min-h-[600px]">
-            <Card className="flex flex-col h-full">
+        <div className="col-span-12 md:col-start-8 md:col-span-5 w-full h-full md:min-h-[600px]">
+            <Card className="flex flex-col h-full rounded-none md:rounded-lg overflow-hidden md:overflow-visible">
                 <div className="grid grid-cols-12 gap-1 p-1">
                     <div className="col-span-10">
                         <DappSelector dapps={dapps} selectedId={selectedDapp} onSelect={handleDappSelection} />

@@ -241,12 +241,13 @@ const SpaceLiquidityPool = () => {
   }, []);
 
   return (
-    <div className="w-screen min-h-screen grid place-items-center">
-      <div className="grid grid-cols-12 gap-1 max-w-7xl w-full h-[600px]">
+    <div className="w-screen h-screen overflow-hidden md:min-h-screen md:h-auto md:overflow-visible md:grid md:place-items-center">
+      <div className="grid grid-cols-12 gap-1 max-w-7xl w-full h-full md:h-[600px]">
         <Stats
           selectedPool={selectedPool}
           currentPool={currentPool}
-          chartData={chartData} />
+          chartData={chartData}
+          className="hidden md:block" />
         <ActionPanel
           selectedPool={selectedPool}
           onSelectedPoolChange={setSelectedPool}
