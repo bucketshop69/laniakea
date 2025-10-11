@@ -7,11 +7,13 @@ import DriftTrade from './DriftTrade';
 import { useDriftStore, type DriftView } from '../state';
 import { useDriftMarketChart } from '../hooks/useDriftMarketChart';
 import { useDriftMarketDiscovery } from '../hooks/useDriftMarketDiscovery';
+import { useDriftPositions } from '../hooks/useDriftPositions';
 
 const DriftAction = () => {
     // Ensure sockets and discovery are active regardless of sub-view
     useDriftMarketChart();
     useDriftMarketDiscovery();
+    useDriftPositions();
 
     const activeAction = useDriftStore((state) => state.activeView);
     const setActiveAction = useDriftStore((state) => state.setActiveView);

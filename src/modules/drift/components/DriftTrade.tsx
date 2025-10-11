@@ -1,4 +1,6 @@
 import { useState, useMemo } from 'react';
+import { useWallet } from '@solana/wallet-adapter-react';
+import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,7 +13,8 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { TrendingUp, TrendingDown, AlertCircle } from 'lucide-react';
-import { useDriftMarketsStore } from '../state';
+import { useDriftMarketsStore, useDriftSessionStore, useDriftPositionsStore } from '../state';
+import { initializeUserAccount } from '../services/driftPositionService';
 import { DriftCandlestickChart } from './DriftCandlestickChart';
 
 type PositionDirection = 'long' | 'short';
@@ -28,12 +31,18 @@ const formatPercent = (value: number | undefined) => {
 };
 
 const DriftTrade = () => {
+  const wallet = useWallet();
+  const { setVisible: setWalletModalVisible } = useWalletModal();
   const markets = useDriftMarketsStore((state) => state.markets);
   const selectedMarketIndex = useDriftMarketsStore((state) => state.selectedMarketIndex);
   const selectMarket = useDriftMarketsStore((state) => state.selectMarket);
   const snapshots = useDriftMarketsStore((state) => state.snapshots);
   const chartData = useDriftMarketsStore((state) => state.chart.data);
   const chartLoading = useDriftMarketsStore((state) => state.chart.loading);
+
+  const clientReady = useDriftSessionStore((state) => state.clientReady);
+  const readOnly = useDriftSessionStore((state) => state.readOnly);
+  const clientError = useDriftSessionStore((state) => state.clientError);
 
   const [direction, setDirection] = useState<PositionDirection>('long');
   const [orderType, setOrderType] = useState<OrderType>('market');
@@ -60,6 +69,15 @@ const DriftTrade = () => {
   const currentPrice = snapshot?.markPrice || 0;
   const change24h = snapshot?.change24hPct;
 
+  const userExists = useDriftPositionsStore((s) => s.userExists);
+  const userReady = useDriftPositionsStore((s) => s.userReady);
+  const userError = useDriftPositionsStore((s) => s.userError);
+  const usdcBalance = useDriftPositionsStore((s) => s.usdcBalance);
+  const freeCollateral = useDriftPositionsStore((s) => s.freeCollateral);
+  const buyingPower = useDriftPositionsStore((s) => s.buyingPower);
+  const leverageRatio = useDriftPositionsStore((s) => s.leverage);
+  const [creatingUser, setCreatingUser] = useState(false);
+
   const handleMarketChange = (marketIndexStr: string) => {
     selectMarket(parseInt(marketIndexStr));
   };
@@ -76,6 +94,14 @@ const DriftTrade = () => {
   const estimatedFee = usdValue * 0.0006;
 
   const handleTrade = () => {
+    if (!wallet.connected || readOnly) {
+      setWalletModalVisible(true);
+      return;
+    }
+    if (!clientReady) {
+      console.log('Trading session is initializing...');
+      return;
+    }
     console.log('Trade:', {
       market: selectedMarket?.symbol,
       direction,
@@ -86,8 +112,63 @@ const DriftTrade = () => {
     });
   };
 
+  const canTrade = wallet.connected && clientReady && !readOnly;
+  const buttonLabel = !wallet.connected
+    ? 'CONNECT WALLET'
+    : !clientReady
+      ? 'INITIALIZING…'
+      : readOnly
+        ? 'CONNECT WALLET'
+        : `OPEN ${direction.toUpperCase()} POSITION`;
+
   return (
     <div>
+      {wallet.connected && clientReady && userExists === false && (
+        <div className="mb-2 flex items-center justify-between rounded-md border border-border/40 bg-muted/20 px-3 py-2 text-xs">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <AlertCircle className="h-3.5 w-3.5" />
+            No Drift account found. Create one to start trading.
+          </div>
+          <Button
+            size="sm"
+            onClick={async () => {
+              try {
+                setCreatingUser(true)
+                const { userAccount } = await initializeUserAccount()
+                console.log('Drift user initialized:', userAccount.toBase58())
+              } catch (e) {
+                console.error('Initialize user failed', e)
+              } finally {
+                setCreatingUser(false)
+              }
+            }}
+            disabled={creatingUser}
+          >
+            {creatingUser ? 'Creating…' : 'Create Drift Account'}
+          </Button>
+        </div>
+      )}
+
+      {wallet.connected && clientReady && userExists === true && (
+        <div className="mb-2 grid grid-cols-4 gap-2 text-xs">
+          <Card className="p-2">
+            <div className="text-muted-foreground">USDC</div>
+            <div className="font-semibold">{typeof usdcBalance === 'number' ? usdcBalance.toFixed(2) : '—'}</div>
+          </Card>
+          <Card className="p-2">
+            <div className="text-muted-foreground">Free Collateral</div>
+            <div className="font-semibold">{typeof freeCollateral === 'number' ? freeCollateral.toFixed(2) : '—'}</div>
+          </Card>
+          <Card className="p-2">
+            <div className="text-muted-foreground">Buying Power</div>
+            <div className="font-semibold">{typeof buyingPower === 'number' ? buyingPower.toFixed(2) : '—'}</div>
+          </Card>
+          <Card className="p-2">
+            <div className="text-muted-foreground">Leverage</div>
+            <div className="font-semibold">{typeof leverageRatio === 'number' ? `${leverageRatio.toFixed(2)}x` : '—'}</div>
+          </Card>
+        </div>
+      )}
       {/* Market Selector + Direction Buttons */}
       <div className="grid grid-cols-12 gap-2">
         <div className="col-span-4">
@@ -297,9 +378,13 @@ const DriftTrade = () => {
                 : 'bg-red-500 text-white hover:bg-red-600'
             )}
             onClick={handleTrade}
-            disabled={!size || parseFloat(size) <= 0}
+            disabled={
+              buttonLabel === 'CONNECT WALLET' ? false :
+                buttonLabel === 'INITIALIZING…' ? true :
+                  !size || parseFloat(size) <= 0
+            }
           >
-            OPEN {direction.toUpperCase()} POSITION
+            {buttonLabel}
           </Button>
         </div>
       </div>

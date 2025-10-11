@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useWallet } from '@solana/wallet-adapter-react'
-import { useDriftMarketsStore } from '../state'
+import { useDriftMarketsStore, useDriftSessionStore } from '../state'
 import { createDriftWalletAdapter } from '../lib/driftWalletAdapter'
 import {
   disposeDriftClient,
@@ -31,6 +31,11 @@ export const useDriftMarketDiscovery = () => {
   const resetSnapshots = useDriftMarketsStore((state) => state.resetSnapshots)
   const selectedMarketIndex = useDriftMarketsStore((state) => state.selectedMarketIndex)
 
+  const setClientReady = useDriftSessionStore((state) => state.setClientReady)
+  const setReadOnly = useDriftSessionStore((state) => state.setReadOnly)
+  const setClientError = useDriftSessionStore((state) => state.setClientError)
+  const resetSession = useDriftSessionStore((state) => state.resetSession)
+
   const refreshTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const walletPublicKey = wallet.publicKey?.toBase58() ?? null
   const refreshSnapshotsRef = useRef<(() => void) | null>(null)
@@ -57,12 +62,18 @@ export const useDriftMarketDiscovery = () => {
 
     const bootstrap = async () => {
       setMarketStatus('loading')
+      setClientError(null)
+      setClientReady(false)
       try {
         const walletAdapter = wallet.connected && wallet.publicKey ? createDriftWalletAdapter(wallet) : undefined
         const client = await getDriftClient(walletAdapter)
         if (cancelled) {
           return
         }
+
+        setReadOnly(driftClientIsReadOnly())
+        setClientReady(true)
+        setClientError(null)
 
         resetSnapshots()
 
@@ -87,6 +98,8 @@ export const useDriftMarketDiscovery = () => {
         console.error('[Drift] failed to bootstrap market discovery', error)
         const message = error instanceof Error ? error.message : 'Unknown error'
         setMarketStatus('error', message)
+        setClientError(message)
+        setClientReady(false)
       }
     }
 
@@ -247,4 +260,10 @@ export const useDriftMarketDiscovery = () => {
       }
     }
   }, [wallet.connected])
+
+  useEffect(() => {
+    if (!wallet.connected) {
+      resetSession()
+    }
+  }, [wallet.connected, resetSession])
 }
