@@ -145,6 +145,12 @@ export const useDriftMarketDiscovery = () => {
 
     const toPriceNumber = (value: unknown): number | undefined => {
       if (typeof value === 'number' && Number.isFinite(value)) {
+        // Heuristic: some streams send integer micro-prices (scaled by 1e6)
+        // Normalize large integers to decimal price
+        if (Number.isInteger(value) && Math.abs(value) > 1e8) {
+          const scaled = value / PRICE_SCALE
+          return Number.isFinite(scaled) ? scaled : undefined
+        }
         return value
       }
       if (typeof value === 'string') {

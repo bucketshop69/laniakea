@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/card';
 import SarosActionRail, { type SarosActionDefinition } from '../../saros/components/SarosActionRail';
 import DriftMarketDiscovery from './DriftMarketDiscovery';
 import DriftTrade from './DriftTrade';
+import DriftOverview from './DriftOverview';
 import { useDriftStore, type DriftView } from '../state';
 import { useDriftMarketChart } from '../hooks/useDriftMarketChart';
 import { useDriftMarketDiscovery } from '../hooks/useDriftMarketDiscovery';
@@ -43,10 +44,8 @@ const DriftAction = () => {
                 );
             case 'overview':
                 return (
-                    <Card className="h-full rounded-2xl p-4">
-                        <div className="flex h-full items-center justify-center text-muted-foreground">
-                            Overview coming soon...
-                        </div>
+                    <Card className="h-full rounded-2xl p-1">
+                        <DriftOverview />
                     </Card>
                 );
             default:

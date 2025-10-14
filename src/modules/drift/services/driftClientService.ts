@@ -8,7 +8,7 @@ import {
 import { Keypair, PublicKey, Transaction, VersionedTransaction } from '@solana/web3.js'
 import { getSolanaConnection } from '@/lib/solanaConnection'
 
-const DRIFT_ENV: DriftEnv = 'mainnet-beta'
+const DRIFT_ENV: DriftEnv = 'devnet'
 
 let clientInstance: DriftClient | null = null
 let currentWallet: IWallet | null = null
