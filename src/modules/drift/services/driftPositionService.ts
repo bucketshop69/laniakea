@@ -334,9 +334,11 @@ export const getAllSpotBalances = async (): Promise<SpotBalanceInfo[]> => {
 
   const env = getDriftEnv()
   const spotConfigs = SpotMarkets[env] ?? []
-  const byIndex = new Map<number, { symbol: string; mint: string; decimals: number }>()
-  spotConfigs.forEach((c) => byIndex.set(c.marketIndex,
-    { symbol: c.symbol, mint: c.mint.toBase58(), decimals: c.decimals }))
+  const byIndex = new Map<number, { symbol: string; mint: string }>()
+  spotConfigs.forEach((c) => byIndex.set(c.marketIndex, {
+    symbol: c.symbol,
+    mint: c.mint.toBase58(),
+  }))
 
   const markets = client.getSpotMarketAccounts?.() ?? []
   const result: SpotBalanceInfo[] = []
@@ -352,7 +354,7 @@ export const getAllSpotBalances = async (): Promise<SpotBalanceInfo[]> => {
         marketIndex: idx,
         symbol: cfg?.symbol ?? `spot#${idx}`,
         mint: cfg?.mint ?? m.mint?.toBase58?.() ?? 'unknown',
-        decimals: cfg?.decimals ?? m.decimals ?? 0,
+        decimals: m.decimals ?? 0,
         amount,
       })
     } catch (e) {
