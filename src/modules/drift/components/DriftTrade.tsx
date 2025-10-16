@@ -20,11 +20,11 @@ import {
   executeMarketPerpOrder,
   executeLimitPerpOrder,
   getAccountMetrics,
-  getActivePerpPositionsSummary,
   type TradePreviewResult,
 } from '../services/driftPositionService';
 import { useDriftPositionsStore as usePositionsStoreRef } from '../state/driftPositionsStore';
 import DriftDepositModal from './DriftDepositModal';
+import DriftPositions from './DriftPositions';
 
 type PositionDirection = 'long' | 'short';
 type OrderType = 'market' | 'limit';
@@ -57,11 +57,6 @@ const DriftTrade = () => {
   const [sizeMode, setSizeMode] = useState<'asset' | 'usdc'>('asset');
   const [percent, setPercent] = useState(0);
 
-  const [openPos, setOpenPos] = useState<{
-    side: 'long' | 'short';
-    size: number;
-  } | null>(null);
-
   const selectedMarket = useMemo(() => {
     return markets.find((m) => m.marketIndex === selectedMarketIndex);
   }, [markets, selectedMarketIndex]);
@@ -79,35 +74,6 @@ const DriftTrade = () => {
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [depositOpen, setDepositOpen] = useState(false);
-
-  // Load open position for selected market
-  useEffect(() => {
-    let cancelled = false;
-    const run = async () => {
-      if (!wallet.connected || !clientReady || readOnly || userExists !== true) {
-        setOpenPos(null);
-        return;
-      }
-      if (selectedMarketIndex === null) {
-        setOpenPos(null);
-        return;
-      }
-      try {
-        const list = await getActivePerpPositionsSummary();
-        if (cancelled) return;
-        const pos = list.find((p) => p.marketIndex === selectedMarketIndex);
-        if (pos && pos.baseSize > 0) {
-          setOpenPos({ side: pos.side, size: pos.baseSize });
-        } else {
-          setOpenPos(null);
-        }
-      } catch {
-        if (!cancelled) setOpenPos(null);
-      }
-    };
-    void run();
-    return () => { cancelled = true; };
-  }, [wallet.connected, clientReady, readOnly, userExists, selectedMarketIndex]);
 
   const handleMarketChange = (marketIndexStr: string) => {
     selectMarket(parseInt(marketIndexStr));
@@ -138,12 +104,12 @@ const DriftTrade = () => {
   // no explicit leverage control; leverage is derived in preview
 
   const handlePreview = async () => {
-    if (!wallet.connected || readOnly) {
+    if (!wallet.connected) {
       setWalletModalVisible(true);
       return;
     }
-    if (!clientReady) {
-      console.log('Trading session is initializing...');
+    if (readOnly || !clientReady) {
+      // Client still initializing, silently wait
       return;
     }
     if (userExists !== true) {
@@ -151,12 +117,12 @@ const DriftTrade = () => {
       return;
     }
     if (selectedMarketIndex === null || typeof currentPrice !== 'number' || currentPrice <= 0) {
-      console.warn('No market selected or invalid price');
+      // No market selected yet, silently skip
       return;
     }
     const sizeValue = parseFloat(size);
     if (!Number.isFinite(sizeValue) || sizeValue <= 0) {
-      console.warn('Enter a valid trade size');
+      // No valid size entered yet, silently skip preview
       return;
     }
 
@@ -187,7 +153,7 @@ const DriftTrade = () => {
       void handlePreview();
     }, 300);
     return () => clearTimeout(timer);
-  }, [direction, orderType, size, sizeMode, limitPrice, selectedMarketIndex, clientReady, wallet.connected]);
+  }, [direction, orderType, size, sizeMode, limitPrice, selectedMarketIndex, clientReady, wallet.connected, userExists]);
 
   const handleTrade = async () => {
     if (!wallet.connected || readOnly || !clientReady || userExists !== true) {
@@ -520,66 +486,13 @@ const DriftTrade = () => {
           >
             {submitting ? 'Submitting…' : buttonLabel}
           </Button>
-          {preview && (
-            <div className="mt-2 space-y-1 text-xs">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Execution</span>
-                <span className="font-semibold">{formatPrice(preview.executionPrice)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Margin Required</span>
-                <span className="font-semibold">${preview.marginRequired.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Fee Estimate</span>
-                <span className="font-semibold">${preview.feeEstimate.toFixed(4)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Leverage After</span>
-                <span className="font-semibold">{preview.leverageAfter ? `${preview.leverageAfter.toFixed(2)}x` : '—'}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Liq Price</span>
-                <span className="font-semibold">{preview.liquidationPrice ? formatPrice(preview.liquidationPrice) : '—'}</span>
-              </div>
-              {preview.warnings.length > 0 && (
-                <ul className="mt-1 space-y-0.5 text-amber-500">
-                  {preview.warnings.map((warning) => (
-                    <li key={warning}>⚠️ {warning}</li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          )}
-          {previewError && (
-            <div className="mt-2 text-xs text-red-400">{previewError}</div>
-          )}
         </div>
       </div>
 
-      {/* Position Badge (inline - compact) */}
-      {openPos && (
-        <div
-          className={cn(
-            'mt-2 rounded-sm border px-2 py-1 text-xs flex items-center justify-between',
-            openPos.side === 'long'
-              ? 'border-emerald-500/30 bg-emerald-500/5'
-              : 'border-red-500/30 bg-red-500/5'
-          )}
-        >
-          <div className="flex items-center gap-2">
-            {openPos.side === 'long' ? (
-              <TrendingUp className="h-3 w-3 text-emerald-400" />
-            ) : (
-              <TrendingDown className="h-3 w-3 text-red-400" />
-            )}
-            <span className="font-semibold text-primary">
-              {openPos.side.toUpperCase()} {openPos.size.toFixed(4)}{' '}
-              {selectedMarket?.baseAssetSymbol}
-            </span>
-            <span className="text-muted-foreground">• Notional {formatPrice(openPos.size * currentPrice)}</span>
-          </div>
-          <span className="font-bold text-muted-foreground">Leverage {leverageRatio ? `${leverageRatio.toFixed(2)}x` : '—'}</span>
+      {userExists === true && (
+        <div className="mt-3">
+          <div className="mb-1 text-xs text-muted-foreground">Open Positions</div>
+          <DriftPositions marketIndex={selectedMarketIndex} />
         </div>
       )}
     </div>
