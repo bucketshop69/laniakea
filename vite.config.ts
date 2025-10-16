@@ -164,6 +164,7 @@ export default defineConfig({
   plugins: [
     react(),
     nodePolyfills({
+      include: ['buffer', 'process', 'stream', 'util', 'crypto', 'events'],
       protocolImports: true,
       globals: {
         Buffer: true,
@@ -217,7 +218,17 @@ export default defineConfig({
     'process.env': {},
     'process.version': JSON.stringify('18.19.0'),
     'process.browser': JSON.stringify(true),
-    'process.versions': JSON.stringify({ node: '18.19.0' })
+    'process.versions': JSON.stringify({ node: '18.19.0' }),
+  },
+  build: {
+    commonjsOptions: {
+      transformMixedEsModules: true,
+    },
+    rollupOptions: {
+      output: {
+        manualChunks: undefined,
+      },
+    },
   },
   optimizeDeps: {
     esbuildOptions: {

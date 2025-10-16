@@ -276,16 +276,44 @@ export const closePerpPosition = async (
   executionPrice: number
 ) => {
   const client = await getDriftClient()
-  const directionEnum = mapDirection(direction)
-  const baseBn = toPrecisionBn(size, BASE_PRECISION)
-  const priceBn = toPrecisionBn(executionPrice, PRICE_PRECISION)
+  if (!client.hasUser()) {
+    throw new Error('No Drift user account')
+  }
 
+  const user = client.getUser()
+  const positions = user.getActivePerpPositions?.() ?? []
+  const position = positions.find((p: any) => p.marketIndex === marketIndex)
+
+  if (!position) {
+    throw new Error('Position not found')
+  }
+
+  // Use the actual baseAssetAmount from the position for precision
+  const positionBaseBn = position.baseAssetAmount instanceof BN
+    ? position.baseAssetAmount
+    : new BN(position.baseAssetAmount ?? 0)
+
+  // Get the absolute value to close the entire position
+  const baseBn = positionBaseBn.abs()
+
+  if (baseBn.isZero()) {
+    throw new Error('Position has zero size')
+  }
+
+  const directionEnum = mapDirection(direction)
+  const priceBn = toPrecisionBn(executionPrice, PRICE_PRECISION)
+  const markPriceBn = toPrecisionBn(executionPrice, PRICE_PRECISION)
+
+  // Use auction params for market close orders
   const params: OptionalOrderParams = {
     orderType: OrderType.MARKET,
     marketType: MarketType.PERP,
     userOrderId: nextUserOrderId(),
     direction: directionEnum,
     baseAssetAmount: baseBn,
+    auctionStartPrice: markPriceBn,
+    auctionEndPrice: priceBn,
+    auctionDuration: 60,
     price: priceBn,
     marketIndex,
     reduceOnly: true,
@@ -293,10 +321,7 @@ export const closePerpPosition = async (
     bitFlags: 0,
     triggerPrice: null,
     oraclePriceOffset: null,
-    auctionDuration: null,
     maxTs: null,
-    auctionStartPrice: null,
-    auctionEndPrice: null,
   }
 
   return client.placeAndTakePerpOrder(params)

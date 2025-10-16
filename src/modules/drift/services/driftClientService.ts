@@ -5,10 +5,37 @@ import {
   getMarketsAndOraclesForSubscription,
   initialize,
 } from '@drift-labs/sdk'
-import { Keypair, PublicKey, Transaction, VersionedTransaction } from '@solana/web3.js'
+import { Keypair, PublicKey, Transaction, VersionedTransaction, Connection } from '@solana/web3.js'
 import { getSolanaConnection } from '@/lib/solanaConnection'
 
-const DRIFT_ENV: DriftEnv = 'devnet'
+// Get Drift environment from env var, default to devnet
+const getDriftEnvFromConfig = (): DriftEnv => {
+  const envVar = import.meta.env.VITE_DRIFT_ENV as string | undefined
+  if (envVar === 'mainnet-beta' || envVar === 'mainnet') {
+    return 'mainnet-beta'
+  }
+  return 'devnet'
+}
+
+// Get Drift-specific RPC connection
+const getDriftConnection = (): Connection => {
+  const driftRpcEndpoint = import.meta.env.VITE_DRIFT_RPC_ENDPOINT as string | undefined
+
+  // If Drift-specific RPC is provided, use it
+  if (driftRpcEndpoint) {
+    console.log('[Drift] Using dedicated Drift RPC endpoint')
+    return new Connection(driftRpcEndpoint, 'confirmed')
+  }
+
+  // Otherwise, fall back to the main Solana connection
+  console.log('[Drift] Using main Solana RPC endpoint')
+  return getSolanaConnection()
+}
+
+const DRIFT_ENV: DriftEnv = getDriftEnvFromConfig()
+
+// Log the environment on startup
+console.log('[Drift] Initialized with environment:', DRIFT_ENV)
 
 let clientInstance: DriftClient | null = null
 let currentWallet: IWallet | null = null
@@ -59,7 +86,7 @@ const walletsMatch = (a: IWallet | null, b: IWallet | null) => {
 
 const createClient = async (wallet: IWallet): Promise<DriftClient> => {
   initialize({ env: DRIFT_ENV })
-  const connection = getSolanaConnection()
+  const connection = getDriftConnection()
   const { perpMarketIndexes, spotMarketIndexes, oracleInfos } = getMarketsAndOraclesForSubscription(DRIFT_ENV)
 
   const client = new DriftClient({

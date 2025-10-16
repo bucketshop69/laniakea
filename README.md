@@ -55,10 +55,8 @@ Real-time information and notifications relevant to user's positions and market 
 **Location**: Notification panel/activity feed  
 **Content Types**:
 - **Market Updates**: General crypto market news and trends  
-- **Position Alerts**: Range notifications, liquidation warnings, opportunity alerts
 - **Protocol News**: Updates from the specific dapp/protocol
 - **Performance Notifications**: Significant PnL changes, milestone alerts
-- **Action Suggestions**: Rebalancing recommendations, new opportunities
 
 ## Implementation Benefits
 
