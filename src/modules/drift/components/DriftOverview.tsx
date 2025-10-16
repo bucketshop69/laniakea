@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
@@ -9,34 +9,18 @@ import {
   TableRow,
   TableCell,
 } from '@/components/ui/table'
-import { cn } from '@/lib/utils'
-import { useDriftMarketsStore, useDriftPositionsStore } from '../state'
+import { useDriftPositionsStore } from '../state'
 import {
   getSpotAssets,
-  getActivePerpPositionsSummary,
   getAllSpotBalances,
   type SpotAsset,
-  type PerpPositionSummary,
 } from '../services/driftPositionService'
 import DriftDepositModal from './DriftDepositModal'
-
-const formatPrice = (value: number | undefined) => {
-  if (typeof value !== 'number' || !Number.isFinite(value)) return '—'
-  return value > 1 ? `$${value.toFixed(2)}` : `$${value.toFixed(4)}`
-}
+import DriftPositions from './DriftPositions'
 
 const DriftOverview = () => {
-  const snapshots = useDriftMarketsStore((s) => s.snapshots)
-  const markets = useDriftMarketsStore((s) => s.markets)
-  const marketByIndex = useMemo(() => {
-    const map = new Map<number, { symbol: string; baseAssetSymbol: string }>()
-    markets.forEach((m) => map.set(m.marketIndex, { symbol: m.symbol, baseAssetSymbol: m.baseAssetSymbol }))
-    return map
-  }, [markets])
-
   const usdcBalance = useDriftPositionsStore((s) => s.usdcBalance)
 
-  const [positions, setPositions] = useState<PerpPositionSummary[]>([])
   const [assets, setAssets] = useState<SpotAsset[]>([])
   const [spotBalances, setSpotBalances] = useState<Record<number, number>>({})
   const [depositOpen, setDepositOpen] = useState(false)
@@ -46,18 +30,16 @@ const DriftOverview = () => {
     let cancelled = false
     const run = async () => {
       const started = performance.now()
-      console.log('[Overview] loading positions and assets…')
+      console.log('[Overview] loading assets and balances…')
       const warnTimer = setTimeout(() => {
-        if (!cancelled) console.warn('[Overview] still loading assets after 3s…')
+        if (!cancelled) console.warn('[Overview] still loading assets/balances after 3s…')
       }, 3000)
       try {
-        const [pos, list, bals] = await Promise.all([
-          getActivePerpPositionsSummary(),
+        const [list, bals] = await Promise.all([
           getSpotAssets(),
           getAllSpotBalances(),
         ])
         if (!cancelled) {
-          setPositions(pos)
           setAssets(list)
           const balMap: Record<number, number> = {}
           bals.forEach((b) => {
@@ -65,11 +47,11 @@ const DriftOverview = () => {
           })
           setSpotBalances(balMap)
           const took = performance.now() - started
-          console.log('[Overview] loaded', { positions: pos.length, assets: list.length, balances: bals.length, ms: Math.round(took) })
+          console.log('[Overview] loaded', { assets: list.length, balances: bals.length, ms: Math.round(took) })
           console.debug('[Overview] assets list', list)
         }
       } catch (e) {
-        console.error('[Overview] failed to load assets/positions', e)
+        console.error('[Overview] failed to load assets/balances', e)
       }
       clearTimeout(warnTimer)
     }
@@ -79,49 +61,12 @@ const DriftOverview = () => {
     }
   }, [])
 
-  const visiblePositions = positions.slice(0, 3)
-  const pages = Math.ceil(positions.length / 3)
-
   return (
     <div className="flex h-full flex-col gap-2">
       {/* Positions - 30% */}
       <div className="min-h-0 basis-[30%] space-y-2">
-        <div className="text-xs text-muted-foreground">Perp Positions</div>
-        {visiblePositions.length === 0 && (
-          <Card className="p-2 text-xs text-muted-foreground">No active positions</Card>
-        )}
-        {visiblePositions.map((p) => {
-          const snap = snapshots[p.marketIndex]
-          const market = marketByIndex.get(p.marketIndex)
-          const markPrice = snap?.markPrice
-          return (
-            <div
-              key={`${p.marketIndex}-${p.side}`}
-              className={cn(
-                'rounded-md border px-2 py-1 text-[11px]',
-                p.side === 'long' ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-red-500/30 bg-red-500/5'
-              )}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold text-primary">{market?.symbol ?? `#${p.marketIndex}`}</span>
-                  <span className={cn('rounded px-1 py-[1px] text-[10px] font-semibold', p.side === 'long' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400')}>
-                    {p.side.toUpperCase()}
-                  </span>
-                  <span className="text-muted-foreground">Size {p.baseSize.toFixed(4)}</span>
-                </div>
-                <div className="text-muted-foreground">Mark {formatPrice(markPrice)}</div>
-              </div>
-            </div>
-          )
-        })}
-        {pages > 1 && (
-          <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
-            {Array.from({ length: pages }).map((_, i) => (
-              <span key={i} className={cn('mx-0.5', i === 0 ? 'text-foreground' : 'opacity-50')}>•</span>
-            ))}
-          </div>
-        )}
+        {/* <div className="text-xs text-muted-foreground">Perp Positions</div> */}
+        <DriftPositions />
       </div>
 
       {/* Assets overview - 10% */}
