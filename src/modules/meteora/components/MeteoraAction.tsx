@@ -3,6 +3,7 @@ import { Search, User, Droplets } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import MeteoraActionRail, { type MeteoraActionDefinition } from './MeteoraActionRail'
 import MeteoraDiscover from './MeteoraDiscover'
+import MeteoraManage from './MeteoraManage'
 import { useMeteoraStore, useMeteoraDataStore, type MeteoraView } from '../state'
 import type { MeteoraPool } from '@/modules/meteora/types/domain'
 
@@ -36,13 +37,7 @@ const MeteoraAction = () => {
   const renderContent = () => {
     switch (activeAction) {
       case 'manage':
-        return (
-          <Card className="h-full rounded-2xl p-1 overflow-y-auto">
-            <div className="p-4 text-center text-muted-foreground">
-              Manage view - Coming soon
-            </div>
-          </Card>
-        )
+        return <MeteoraManage onBack={handleBackToDiscover} />
       case 'profile':
         return (
           <Card className="h-full rounded-2xl p-1 overflow-y-auto">

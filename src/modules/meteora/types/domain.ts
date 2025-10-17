@@ -93,3 +93,60 @@ export interface MeteoraPoolsResponse {
 
 // View types for UI state
 export type MeteoraView = 'discover' | 'manage' | 'profile'
+
+// Strategy types for liquidity distribution
+export enum StrategyType {
+  Spot = 'Spot',
+  Curve = 'Curve',
+  BidAsk = 'BidAsk',
+}
+
+// Active bin information
+export interface MeteoraActiveBin {
+  binId: number
+  price: string
+  pricePerToken: number
+}
+
+// User position information
+export interface MeteoraUserPosition {
+  publicKey: string
+  positionAccount: {
+    lowerBinId: number
+    upperBinId: number
+    lastUpdatedAt: number
+    totalClaimedFeeXAmount: string
+    totalClaimedFeeYAmount: string
+    totalClaimedRewardXAmount: string
+    totalClaimedRewardYAmount: string
+  }
+  positionData: {
+    positionBinData: MeteoraBinData[]
+    totalXAmount: string
+    totalYAmount: string
+    feeX: string
+    feeY: string
+    rewardOne: string
+    rewardTwo: string
+  }
+}
+
+// Bin liquidity data
+export interface MeteoraBinData {
+  binId: number
+  price: number
+  pricePerToken: number
+  binXAmount: string
+  binYAmount: string
+  binLiquidity: string
+  positionLiquidity: string
+  positionXAmount: string
+  positionYAmount: string
+}
+
+// DLMM Pool instance cache
+export interface MeteoraDLMMPoolCache {
+  address: string
+  instance: any // DLMM instance from SDK
+  createdAt: number
+}

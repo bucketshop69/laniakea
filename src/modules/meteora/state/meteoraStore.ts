@@ -8,12 +8,18 @@ export interface MeteoraManageFormState {
   tab: MeteoraManageTab
   baseAmountInput: string
   quoteAmountInput: string
+  minBinId: number | null
+  maxBinId: number | null
+  activeShape: string
 }
 
 const createDefaultManageForm = (): MeteoraManageFormState => ({
   tab: 'add',
   baseAmountInput: '',
   quoteAmountInput: '',
+  minBinId: null,
+  maxBinId: null,
+  activeShape: 'spot',
 })
 
 interface MeteoraStoreState {
