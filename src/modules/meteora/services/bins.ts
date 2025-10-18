@@ -15,6 +15,11 @@ export interface FetchBinDistributionParams {
   range?: number
 }
 
+export interface BinDistributionResult {
+  bins: MeteoraBinLiquidityPoint[]
+  activeBinId: number
+}
+
 /**
  * Fetch bin distribution around the active bin
  * Uses the SDK's efficient getBinsAroundActiveBin method
@@ -23,8 +28,8 @@ export interface FetchBinDistributionParams {
  */
 export async function fetchMeteoraBinDistribution(
   params: FetchBinDistributionParams
-): Promise<MeteoraBinLiquidityPoint[]> {
-  const { poolAddress, activeBin, range = 50 } = params
+): Promise<BinDistributionResult> {
+  const { poolAddress, activeBin, range = 33 } = params
 
   const dlmmPool = await getDLMMPool(poolAddress)
 
@@ -35,37 +40,33 @@ export async function fetchMeteoraBinDistribution(
   })
 
   try {
-    // Use SDK's efficient method to get bins around active bin
+    console.log("Rang per side", range);
+
+    // Use the range parameter passed from the hook (default 33)
     const result = await dlmmPool.getBinsAroundActiveBin(range, range)
 
-    console.log('[Meteora Bins] Fetched bins from SDK', {
-      activeBin: result.activeBin,
-      totalBins: result.bins.length,
-    })
+    console.log('[Meteora Bins] ========== RAW SDK RESPONSE ==========')
+    console.log('[Meteora Bins] Full result object:', result)
+    console.log('[Meteora Bins] Active bin:', result.activeBin)
+    console.log('[Meteora Bins] Total bins fetched:', result.bins.length)
+
 
     // Transform SDK bins to our format
-    const bins: MeteoraBinLiquidityPoint[] = result.bins.map((bin: any) => {
-      // The bin object from getBinsAroundActiveBin contains:
-      // - binId: number
-      // - price: string (the price as a lamport value)
-      // - pricePerToken: number (the human-readable price)
-      // - xAmount: BN
-      // - yAmount: BN
-
-      const pricePerToken = bin.pricePerToken || dlmmPool.fromPricePerLamport(Number(bin.price))
+    const bins: MeteoraBinLiquidityPoint[] = result.bins.map((bin: any, index: number) => {
+      const pricePerToken = Number(bin.pricePerToken)
 
       // Convert from BN to numbers with proper decimals
-      const tokenXDecimals = dlmmPool.tokenX?.decimal || 9
-      const tokenYDecimals = dlmmPool.tokenY?.decimal || 6
+      const tokenXDecimals = dlmmPool.tokenX?.mint?.decimals
+      const tokenYDecimals = dlmmPool.tokenY?.mint?.decimals
 
-      const reserveX = Number(bin.xAmount?.toString() || '0') / Math.pow(10, tokenXDecimals)
-      const reserveY = Number(bin.yAmount?.toString() || '0') / Math.pow(10, tokenYDecimals)
+      const reserveX = Number(bin.xAmount?.toString() || '0') / Math.pow(10, tokenXDecimals ?? 9)
+      const reserveY = Number(bin.yAmount?.toString() || '0') / Math.pow(10, tokenYDecimals ?? 9)
 
       // Calculate total liquidity value in quote token terms
       // reserveX is valued at current bin price, reserveY is already in quote token
       const liquidityValue = (reserveX * pricePerToken) + reserveY
 
-      return {
+      const processedBin = {
         binId: bin.binId,
         price: Number(bin.price),
         pricePerToken,
@@ -73,25 +74,19 @@ export async function fetchMeteoraBinDistribution(
         reserveY,
         liquidity: liquidityValue,
       }
+
+      // Log first few bins to verify processing
+      if (index < 3) {
+        console.log(`\n[Meteora Bins] PROCESSED BIN ${index}:`, processedBin)
+      }
+
+      return processedBin
     })
 
-    // Count bins with each type of liquidity for debugging
-    const binsWithX = bins.filter(b => b.reserveX > 0).length
-    const binsWithY = bins.filter(b => b.reserveY > 0).length
-    const binsWithBoth = bins.filter(b => b.reserveX > 0 && b.reserveY > 0).length
-
-    console.log('[Meteora Bins] Processed bins', {
-      totalBins: bins.length,
-      minBinId: bins[0]?.binId,
-      maxBinId: bins[bins.length - 1]?.binId,
-      binsWithX,
-      binsWithY,
-      binsWithBoth,
-      sampleBin: bins[0],
-      activeBinSample: bins.find(b => b.binId === activeBin),
-    })
-
-    return bins
+    return {
+      bins,
+      activeBinId: result.activeBin, // Return the active bin from SDK
+    }
   } catch (error) {
     console.error('[Meteora Bins] Failed to fetch bin distribution', error)
     throw error

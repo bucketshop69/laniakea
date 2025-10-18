@@ -84,7 +84,6 @@ const MeteoraDiscover = ({ onSelect }: MeteoraDiscoverProps) => {
           <TableHeader className="sticky top-0 z-10">
             <TableRow>
               <TableHead className="w-[30%] bg-card">Pair</TableHead>
-              <TableHead className="bg-card">Pools</TableHead>
               <TableHead className="bg-card">TVL</TableHead>
               <TableHead className="bg-card">Volume (24h)</TableHead>
               <TableHead className="bg-card">Max Fee/TVL</TableHead>
@@ -138,7 +137,6 @@ const MeteoraDiscover = ({ onSelect }: MeteoraDiscoverProps) => {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>{pairGroup.pool_count}</TableCell>
                     <TableCell>${formatNumber(pairGroup.total_tvl)}</TableCell>
                     <TableCell>${formatNumber(pairGroup.total_volume)}</TableCell>
                     <TableCell>{formatNumber(pairGroup.max_fee_tvl_ratio)}%</TableCell>
@@ -174,15 +172,11 @@ const MeteoraDiscover = ({ onSelect }: MeteoraDiscoverProps) => {
                             <div className="ml-1 border-l border-muted-foreground/30 pl-1">
                               <div className="flex items-center gap-1">
                                 <Sparkles className="h-3 w-3 text-blue" />
-                                <span className="text-xs">{pool.name}</span>
                                 <span className="text-xs text-muted-foreground">
                                   (Bin {pool.bin_step})
                                 </span>
                               </div>
                             </div>
-                          </TableCell>
-                          <TableCell className="text-xs">
-                            <span className="text-muted-foreground">APY:</span> {formatNumber(pool.apy)}%
                           </TableCell>
                           <TableCell className="text-xs">${formatNumber(parseFloat(pool.liquidity))}</TableCell>
                           <TableCell className="text-xs">${formatNumber(pool.trade_volume_24h)}</TableCell>

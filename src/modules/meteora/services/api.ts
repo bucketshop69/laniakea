@@ -68,7 +68,7 @@ export async function fetchPairGroupPools(
 ): Promise<MeteoraPoolsResponse> {
   const defaultParams: FetchPairGroupPoolsParams = {
     page: 1,
-    per_page: 10,
+    per_page: 4,
     sort_by: 'volume_24h:desc',
     filter_by: 'is_blacklisted:=false',
     fee_tvl_ratio_tw: 'fee_tvl_ratio_24h',

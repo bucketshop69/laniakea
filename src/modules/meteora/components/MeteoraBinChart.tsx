@@ -7,7 +7,6 @@ import {
   CartesianGrid,
   ResponsiveContainer,
   Tooltip,
-  ReferenceLine,
   Cell,
   Brush,
 } from 'recharts'
@@ -21,6 +20,7 @@ interface MeteoraBinChartProps {
   onRangeChange: (minBinId: number, maxBinId: number) => void
   baseSymbol: string
   quoteSymbol: string
+  maxBinSelection?: number // Optional max bin selection limit
 }
 
 type ChartDataPoint = {
@@ -42,20 +42,40 @@ const MeteoraBinChart = ({
   onRangeChange,
   baseSymbol,
   quoteSymbol,
+  maxBinSelection,
 }: MeteoraBinChartProps) => {
   const chartData = useMemo<ChartDataPoint[]>(() => {
-    return binData
+    const data = binData
       .sort((a, b) => a.binId - b.binId)
-      .map((bin) => ({
-        binId: bin.binId,
-        delta: bin.binId - activeBinId,
-        liquidity: bin.liquidity,
-        reserveX: bin.reserveX,
-        reserveY: bin.reserveY,
-        price: bin.price,
-        pricePerToken: bin.pricePerToken,
-        isActive: bin.binId === activeBinId,
-      }))
+      .map((bin) => {
+        // Ensure all numeric values are valid numbers
+        const ensureNumber = (val: any): number => {
+          const num = Number(val)
+          return Number.isFinite(num) ? num : 0
+        }
+
+        return {
+          binId: bin.binId,
+          delta: bin.binId - activeBinId,
+          liquidity: ensureNumber(bin.liquidity),
+          reserveX: ensureNumber(bin.reserveX),
+          reserveY: ensureNumber(bin.reserveY),
+          price: ensureNumber(bin.price),
+          pricePerToken: ensureNumber(bin.pricePerToken),
+          isActive: bin.binId === activeBinId,
+        }
+      })
+
+    // Debug: log first few data points
+    console.log('[Meteora Chart] Chart data (first 3):', data.slice(0, 3))
+    console.log('[Meteora Chart] Any NaN values?', data.some(d =>
+      !Number.isFinite(d.liquidity) ||
+      !Number.isFinite(d.pricePerToken) ||
+      !Number.isFinite(d.reserveX) ||
+      !Number.isFinite(d.reserveY)
+    ))
+
+    return data
   }, [binData, activeBinId])
 
   const activeIndex = useMemo(() => {
@@ -63,13 +83,15 @@ const MeteoraBinChart = ({
   }, [chartData, activeBinId])
 
   const minIndex = useMemo(() => {
-    if (minBinId === null) return 0
-    return chartData.findIndex((d) => d.binId === minBinId)
+    if (minBinId === null || chartData.length === 0) return 0
+    const idx = chartData.findIndex((d) => d.binId === minBinId)
+    return idx >= 0 ? idx : 0
   }, [chartData, minBinId])
 
   const maxIndex = useMemo(() => {
-    if (maxBinId === null) return chartData.length - 1
-    return chartData.findIndex((d) => d.binId === maxBinId)
+    if (maxBinId === null || chartData.length === 0) return chartData.length - 1
+    const idx = chartData.findIndex((d) => d.binId === maxBinId)
+    return idx >= 0 ? idx : chartData.length - 1
   }, [chartData, maxBinId])
 
   const handleBrushChange = (range: { startIndex?: number; endIndex?: number }) => {
@@ -78,11 +100,18 @@ const MeteoraBinChart = ({
     let startIdx = range.startIndex
     let endIdx = range.endIndex
 
-    // Clamp to 63 bins max (Meteora limitation)
-    const selectedBins = endIdx - startIdx + 1
-    if (selectedBins > 63) {
-      // Keep the start, adjust the end
-      endIdx = startIdx + 62
+    // Apply bin selection limit if provided
+    if (maxBinSelection && maxBinSelection > 0) {
+      const selectedBins = endIdx - startIdx + 1
+      if (selectedBins > maxBinSelection) {
+        // Keep the start, adjust the end to respect the limit
+        endIdx = startIdx + maxBinSelection - 1
+        console.log('[Meteora Chart] Bin selection clamped to max:', {
+          requested: selectedBins,
+          maxAllowed: maxBinSelection,
+          adjustedRange: `${startIdx} to ${endIdx}`,
+        })
+      }
     }
 
     const startBinId = chartData[startIdx]?.binId
@@ -129,62 +158,59 @@ const MeteoraBinChart = ({
   }
 
   return (
-    <ResponsiveContainer width="100%" height="100%">
-      <BarChart
-        data={chartData}
-        margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
-      >
-        <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.3} />
-        <XAxis
-          dataKey="delta"
-          stroke="#64748B"
-          fontSize={9}
-          tickFormatter={(value) => (value === 0 ? '0' : value > 0 ? `+${value}` : `${value}`)}
-          axisLine={false}
-          tickLine={false}
-        />
-        <YAxis
-          stroke="#64748B"
-          fontSize={9}
-          axisLine={false}
-          tickLine={false}
-          tickFormatter={(value) => value.toFixed(0)}
-        />
-        <Tooltip content={<CustomTooltip />} cursor={{ fill: '#1E293B', opacity: 0.3 }} />
-        <ReferenceLine
-          x={0}
-          stroke="#F97316"
-          strokeWidth={2}
-          strokeDasharray="3 3"
-        />
-        <Bar dataKey="liquidity" radius={[2, 2, 0, 0]}>
-          {chartData.map((entry, index) => {
-            const isInRange = index >= minIndex && index <= maxIndex
-            let fillColor = '#22D3EE'
-            if (entry.isActive) fillColor = '#F97316'
-            else if (isInRange) fillColor = '#3B82F6'
+    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <ResponsiveContainer width="100%" height="85%">
+        <BarChart
+          data={chartData}
+          margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
+        >
+          <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.3} />
+          <XAxis
+            dataKey="pricePerToken"
+            stroke="#64748B"
+            fontSize={9}
+            tickFormatter={(value) => Number(value).toFixed(4)}
+            axisLine={false}
+            tickLine={false}
+          />
+          <Tooltip content={<CustomTooltip />} cursor={{ fill: '#1E293B', opacity: 0.3 }} />
+          <Bar dataKey="liquidity" radius={[2, 2, 0, 0]}>
+            {chartData.map((entry, index) => {
+              const isInRange = index >= minIndex && index <= maxIndex
+              let fillColor = '#22D3EE'
+              if (entry.isActive) fillColor = '#F97316'
+              else if (isInRange) fillColor = '#3B82F6'
 
-            return (
-              <Cell
-                key={`cell-${entry.binId}`}
-                fill={fillColor}
-                opacity={entry.isActive ? 0.9 : isInRange ? 0.7 : 0.3}
-              />
-            )
-          })}
-        </Bar>
-        <Brush
-          dataKey="delta"
-          height={20}
-          stroke="#3B82F6"
-          fill="#1E293B"
-          startIndex={minIndex}
-          endIndex={maxIndex}
-          onChange={handleBrushChange}
-          tickFormatter={(value) => (value === 0 ? '0' : value > 0 ? `+${value}` : `${value}`)}
-        />
-      </BarChart>
-    </ResponsiveContainer>
+              return (
+                <Cell
+                  key={`cell-${entry.binId}`}
+                  fill={fillColor}
+                  opacity={entry.isActive ? 0.9 : isInRange ? 0.7 : 0.3}
+                />
+              )
+            })}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+      <ResponsiveContainer width="100%" height="15%">
+        <BarChart
+          data={chartData}
+          margin={{ top: 0, right: 5, left: 5, bottom: 5 }}
+        >
+          <Brush
+            dataKey="pricePerToken"
+            height={20}
+            stroke="#3B82F6"
+            fill="#1E293B"
+            startIndex={minIndex}
+            endIndex={maxIndex}
+            onChange={handleBrushChange}
+            tickFormatter={(value) => Number(value).toFixed(4)}
+            alwaysShowText
+          />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
   )
 }
 

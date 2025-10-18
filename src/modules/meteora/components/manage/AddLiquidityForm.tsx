@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { Loader2, PlusCircle, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -85,6 +86,23 @@ const AddLiquidityForm = ({
   isSubmitting,
   isSubmitDisabled,
 }: AddLiquidityFormProps) => {
+  // Local state for price inputs to allow free typing
+  const [minPriceInput, setMinPriceInput] = useState('')
+  const [maxPriceInput, setMaxPriceInput] = useState('')
+
+  // Update input values when displayMinPrice/displayMaxPrice change (from brush)
+  useEffect(() => {
+    if (displayMinPrice !== null && typeof displayMinPrice === 'number') {
+      setMinPriceInput(displayMinPrice.toFixed(8))
+    }
+  }, [displayMinPrice])
+
+  useEffect(() => {
+    if (displayMaxPrice !== null && typeof displayMaxPrice === 'number') {
+      setMaxPriceInput(displayMaxPrice.toFixed(8))
+    }
+  }, [displayMaxPrice])
+
   return (
     <div className="flex h-full flex-col gap-2 rounded-xl border border-border/40 p-2 text-xs">
       <div className="grid grid-cols-2 gap-2">
@@ -143,6 +161,7 @@ const AddLiquidityForm = ({
             onRangeChange={onRangeChange}
             baseSymbol={baseSymbol}
             quoteSymbol={quoteSymbol}
+            maxBinSelection={undefined} // Set to undefined for no limit, or pass a number like 100
           />
         ) : (
           <div className="flex h-full items-center justify-center text-muted-foreground">
@@ -163,11 +182,10 @@ const AddLiquidityForm = ({
           </label>
           <Input
             type="text"
-            value={displayMinPrice !== null && typeof displayMinPrice === 'number' ? displayMinPrice.toFixed(8) : ''}
-            onChange={(event) => onMinPriceChange(event.target.value)}
-            onBlur={(event) => onMinPriceChange(event.target.value)}
+            value={minPriceInput}
+            disabled
             placeholder="Min price"
-            className="h-7 text-xs"
+            className="h-7 bg-muted text-xs"
             inputMode="decimal"
           />
         </div>
@@ -182,11 +200,10 @@ const AddLiquidityForm = ({
           </label>
           <Input
             type="text"
-            value={displayMaxPrice !== null && typeof displayMaxPrice === 'number' ? displayMaxPrice.toFixed(8) : ''}
-            onChange={(event) => onMaxPriceChange(event.target.value)}
-            onBlur={(event) => onMaxPriceChange(event.target.value)}
+            value={maxPriceInput}
+            disabled
             placeholder="Max price"
-            className="h-7 text-xs"
+            className="h-7 bg-muted text-xs"
             inputMode="decimal"
           />
         </div>

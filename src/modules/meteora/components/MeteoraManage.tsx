@@ -100,11 +100,11 @@ const MeteoraManage = ({ onBack }: MeteoraManageProps) => {
     updateManageForm(poolAddress, patch)
   }, [poolAddress, updateManageForm])
 
-  // Fetch active bin for the pool
-  const [activeBinId, setActiveBinId] = useState<number | null>(null)
+  // First fetch active bin for the pool (needed to initialize the bin distribution hook)
+  const [initialActiveBinId, setInitialActiveBinId] = useState<number | null>(null)
   useEffect(() => {
     if (!poolAddress) {
-      setActiveBinId(null)
+      setInitialActiveBinId(null)
       return
     }
 
@@ -113,8 +113,8 @@ const MeteoraManage = ({ onBack }: MeteoraManageProps) => {
     getActiveBin(poolAddress)
       .then((activeBin) => {
         if (!cancelled) {
-          setActiveBinId(activeBin.binId)
-          console.log('[Meteora Manage] Active bin fetched', {
+          setInitialActiveBinId(activeBin.binId)
+          console.log('[Meteora Manage] Initial active bin fetched', {
             binId: activeBin.binId,
             price: activeBin.price,
             pricePerToken: activeBin.pricePerToken,
@@ -122,9 +122,9 @@ const MeteoraManage = ({ onBack }: MeteoraManageProps) => {
         }
       })
       .catch((error) => {
-        console.error('[Meteora Manage] Failed to fetch active bin', error)
+        console.error('[Meteora Manage] Failed to fetch initial active bin', error)
         if (!cancelled) {
-          setActiveBinId(null)
+          setInitialActiveBinId(null)
         }
       })
 
@@ -133,16 +133,20 @@ const MeteoraManage = ({ onBack }: MeteoraManageProps) => {
     }
   }, [poolAddress])
 
-  // Fetch bin distribution
+  // Fetch bin distribution - this returns the active bin from SDK, so we use that instead of a separate call
   const {
     data: binData,
+    activeBinId: activeBinFromSDK,
     isLoading: binLoading,
   } = useMeteoraBinDistribution({
     poolAddress: poolAddress ?? undefined,
-    activeBin: activeBinId ?? undefined,
-    range: 50,
-    enabled: Boolean(poolAddress && activeBinId !== null),
+    activeBin: initialActiveBinId ?? undefined,
+    range: 33,
+    enabled: Boolean(poolAddress && initialActiveBinId !== null),
   })
+
+  // Use the active bin ID from the SDK response (more efficient than separate call)
+  const activeBinId = activeBinFromSDK ?? initialActiveBinId
 
   // Fetch balances when wallet connects or pool changes
   useEffect(() => {
@@ -283,32 +287,33 @@ const MeteoraManage = ({ onBack }: MeteoraManageProps) => {
   const activeShape = manageForm?.activeShape ?? 'spot'
 
   // Initialize default range around active bin
-  // Use a reasonable default range based on bin distribution data
   useEffect(() => {
-    if (activeBinId !== null && minBinId === null && maxBinId === null && binData.length > 0) {
-      // Find a good default range from the fetched bin data
-      const dataMinBinId = Math.min(...binData.map(b => b.binId))
-      const dataMaxBinId = Math.max(...binData.map(b => b.binId))
+    if (binData.length === 0 || activeBinId === null) return
 
-      // Use a smaller range around active bin for initial selection
-      const rangeSize = Math.min(20, Math.floor((dataMaxBinId - dataMinBinId) / 3))
-      const defaultMinBinId = Math.max(dataMinBinId, activeBinId - rangeSize)
-      const defaultMaxBinId = Math.min(dataMaxBinId, activeBinId + rangeSize)
+    const dataMinBinId = Math.min(...binData.map(b => b.binId))
+    const dataMaxBinId = Math.max(...binData.map(b => b.binId))
 
-      updateForm({ minBinId: defaultMinBinId, maxBinId: defaultMaxBinId })
-
-      console.log('[Meteora Manage] Initialized default bin range', {
-        activeBinId,
-        defaultMinBinId,
-        defaultMaxBinId,
-        numBins: defaultMaxBinId - defaultMinBinId + 1,
-      })
+    // Only initialize if BOTH min and max are null (first load or pool change)
+    if (minBinId === null && maxBinId === null) {
+      updateForm({ minBinId: dataMinBinId, maxBinId: dataMaxBinId })
+      return
     }
-  }, [activeBinId, minBinId, maxBinId, binData, updateForm])
 
-  // Calculate display prices from bin IDs (placeholder - will be calculated from bin data)
+    // If bins are set but invalid (pool changed), reset them
+    const minBinExists = minBinId !== null && binData.some(b => b.binId === minBinId)
+    const maxBinExists = maxBinId !== null && binData.some(b => b.binId === maxBinId)
+
+    if (minBinId !== null && maxBinId !== null && (!minBinExists || !maxBinExists)) {
+      updateForm({ minBinId: dataMinBinId, maxBinId: dataMaxBinId })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeBinId, binData, poolAddress])
+
+  // Calculate display prices from bin IDs
   const displayMinPrice = useMemo(() => {
-    if (minBinId === null || binData.length === 0) return null
+    if (minBinId === null || binData.length === 0) {
+      return null
+    }
     const bin = binData.find(b => b.binId === minBinId)
     return bin?.pricePerToken ?? null
   }, [minBinId, binData])
@@ -337,9 +342,11 @@ const MeteoraManage = ({ onBack }: MeteoraManageProps) => {
   }, [displayMaxPrice, activeBinPrice])
 
   const numBins = useMemo(() => {
-    if (minBinId === null || maxBinId === null) return 0
-    return maxBinId - minBinId + 1
-  }, [minBinId, maxBinId])
+    if (minBinId === null || maxBinId === null || binData.length === 0) return 0
+    // Count actual bins in the selected range (handles non-contiguous bin IDs)
+    const binsInRange = binData.filter(b => b.binId >= minBinId && b.binId <= maxBinId)
+    return binsInRange.length
+  }, [minBinId, maxBinId, binData])
 
   const isAddDisabled = !baseAmountInput || !quoteAmountInput || minBinId === null || maxBinId === null
 
@@ -422,57 +429,143 @@ const MeteoraManage = ({ onBack }: MeteoraManageProps) => {
     formatAvailable,
   ])
 
-  // Handle min price input - convert price to bin ID
+  // Handle min price input - only validate and convert on blur (when user finishes typing)
   const handleMinPriceChange = useCallback(async (value: string) => {
-    if (!poolAddress) return
+    if (!poolAddress || binData.length === 0) return
+
+    // Allow empty input (user might be clearing to retype)
+    if (value.trim() === '') {
+      return
+    }
 
     const parsedPrice = parseFloat(value)
     if (!Number.isFinite(parsedPrice) || parsedPrice <= 0) {
       console.warn('[Meteora Manage] Invalid min price input:', value)
+      setErrorMessage('Invalid min price')
+      return
+    }
+
+    // Get the min and max allowed prices from binData
+    const minAllowedPrice = Math.min(...binData.map(b => b.pricePerToken))
+    const maxAllowedPrice = Math.max(...binData.map(b => b.pricePerToken))
+
+    // Validate the price is within allowed range
+    if (parsedPrice < minAllowedPrice) {
+      console.warn('[Meteora Manage] Min price cannot be less than lowest bin price', {
+        inputPrice: parsedPrice,
+        minAllowed: minAllowedPrice,
+      })
+      setErrorMessage(`Min price cannot be less than ${minAllowedPrice.toFixed(8)}`)
+      return
+    }
+
+    if (parsedPrice > maxAllowedPrice) {
+      console.warn('[Meteora Manage] Min price cannot be greater than highest bin price', {
+        inputPrice: parsedPrice,
+        maxAllowed: maxAllowedPrice,
+      })
+      setErrorMessage(`Min price cannot be greater than ${maxAllowedPrice.toFixed(8)}`)
+      return
+    }
+
+    // Validate against current max price
+    if (displayMaxPrice !== null && parsedPrice >= displayMaxPrice) {
+      console.warn('[Meteora Manage] Min price must be less than max price', {
+        minPrice: parsedPrice,
+        maxPrice: displayMaxPrice,
+      })
+      setErrorMessage(`Min price must be less than max price (${displayMaxPrice.toFixed(8)})`)
       return
     }
 
     try {
       const binId = await getBinIdFromPrice(poolAddress, parsedPrice, true)
 
-      // Ensure min bin ID is not greater than max bin ID
-      if (maxBinId !== null && binId > maxBinId) {
-        console.warn('[Meteora Manage] Min bin ID cannot exceed max bin ID', { binId, maxBinId })
-        return
-      }
+      console.log('[Meteora] 🔵 Min price input → binId', {
+        userInput: parsedPrice,
+        foundBinId: binId,
+        oldMinBinId: minBinId,
+        maxBinId,
+      })
 
       updateForm({ minBinId: binId })
-      console.log('[Meteora Manage] Min price updated', { price: parsedPrice, binId })
+      setErrorMessage(null)
+
+      console.log('[Meteora] ✅ Reactive chain triggered - chart, brush, bins will update')
     } catch (error) {
       console.error('[Meteora Manage] Failed to convert min price to bin ID', error)
+      setErrorMessage('Failed to update min price')
     }
-  }, [poolAddress, maxBinId, updateForm])
+  }, [poolAddress, binData, displayMaxPrice, updateForm])
 
-  // Handle max price input - convert price to bin ID
+  // Handle max price input - only validate and convert on blur (when user finishes typing)
   const handleMaxPriceChange = useCallback(async (value: string) => {
-    if (!poolAddress) return
+    if (!poolAddress || binData.length === 0) return
+
+    // Allow empty input (user might be clearing to retype)
+    if (value.trim() === '') {
+      return
+    }
 
     const parsedPrice = parseFloat(value)
     if (!Number.isFinite(parsedPrice) || parsedPrice <= 0) {
       console.warn('[Meteora Manage] Invalid max price input:', value)
+      setErrorMessage('Invalid max price')
+      return
+    }
+
+    // Get the min and max allowed prices from binData
+    const minAllowedPrice = Math.min(...binData.map(b => b.pricePerToken))
+    const maxAllowedPrice = Math.max(...binData.map(b => b.pricePerToken))
+
+    // Validate the price is within allowed range
+    if (parsedPrice < minAllowedPrice) {
+      console.warn('[Meteora Manage] Max price cannot be less than lowest bin price', {
+        inputPrice: parsedPrice,
+        minAllowed: minAllowedPrice,
+      })
+      setErrorMessage(`Max price cannot be less than ${minAllowedPrice.toFixed(8)}`)
+      return
+    }
+
+    if (parsedPrice > maxAllowedPrice) {
+      console.warn('[Meteora Manage] Max price cannot be greater than highest bin price', {
+        inputPrice: parsedPrice,
+        maxAllowed: maxAllowedPrice,
+      })
+      setErrorMessage(`Max price cannot be greater than ${maxAllowedPrice.toFixed(8)}`)
+      return
+    }
+
+    // Validate against current min price
+    if (displayMinPrice !== null && parsedPrice <= displayMinPrice) {
+      console.warn('[Meteora Manage] Max price must be greater than min price', {
+        maxPrice: parsedPrice,
+        minPrice: displayMinPrice,
+      })
+      setErrorMessage(`Max price must be greater than min price (${displayMinPrice.toFixed(8)})`)
       return
     }
 
     try {
       const binId = await getBinIdFromPrice(poolAddress, parsedPrice, false)
 
-      // Ensure max bin ID is not less than min bin ID
-      if (minBinId !== null && binId < minBinId) {
-        console.warn('[Meteora Manage] Max bin ID cannot be less than min bin ID', { binId, minBinId })
-        return
-      }
+      console.log('[Meteora] 🔵 Max price input → binId', {
+        userInput: parsedPrice,
+        foundBinId: binId,
+        minBinId,
+        oldMaxBinId: maxBinId,
+      })
 
       updateForm({ maxBinId: binId })
-      console.log('[Meteora Manage] Max price updated', { price: parsedPrice, binId })
+      setErrorMessage(null)
+
+      console.log('[Meteora] ✅ Reactive chain triggered - chart, brush, bins will update')
     } catch (error) {
       console.error('[Meteora Manage] Failed to convert max price to bin ID', error)
+      setErrorMessage('Failed to update max price')
     }
-  }, [poolAddress, minBinId, updateForm])
+  }, [poolAddress, binData, displayMinPrice, updateForm])
 
   const handleAddLiquidity = async () => {
     if (!connected || !publicKey) {

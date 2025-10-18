@@ -85,9 +85,9 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
     const triggerMeteoraFetch = useMeteoraDataStore((state) => state.fetchPairGroupsData);
 
     const dapps: DappOption[] = [
-        { id: 'saros', name: 'Saros', iconSrc: '/saros/SAROS_Mark_Purple.png' },
         { id: 'meteora', name: 'Meteora', iconSrc: '/meteora/meteora.png' },
         { id: 'drift', name: 'Drift', iconSrc: '/drift/drift-logo.svg' },
+        { id: 'saros', name: 'Saros', iconSrc: '/saros/SAROS_Mark_Purple.png' },
     ];
 
     const currentPool = pools.find(p => p.pair === selectedPool) || pools[0];
