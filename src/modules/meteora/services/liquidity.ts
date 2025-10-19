@@ -1,7 +1,9 @@
-import { PublicKey, Transaction, Keypair } from '@solana/web3.js'
+import { PublicKey, Transaction, Keypair, Connection, VersionedTransaction } from '@solana/web3.js'
 import { BN } from '@coral-xyz/anchor'
 import { getDLMMPool } from './dlmmClient'
 import { StrategyType } from '../types/domain'
+import { getUserPositions } from './positions'
+import { sendViaSanctum } from '@/lib/sanctumGateway'
 
 export interface AddLiquidityParams {
   poolAddress: string
@@ -134,6 +136,95 @@ export async function removeLiquidityAndClose(
 }
 
 /**
+ * Execute remove liquidity transaction with full flow
+ * Handles position fetching, transaction building, and sending via Sanctum
+ * @param params - Execution parameters
+ * @returns Transaction signature
+ */
+export async function executeRemoveLiquidity({
+  poolAddress,
+  positionMint,
+  userPublicKey,
+  connection,
+  signTransaction,
+}: {
+  poolAddress: string
+  positionMint: string
+  userPublicKey: PublicKey
+  connection: Connection
+  signTransaction: (tx: Transaction | VersionedTransaction) => Promise<Transaction | VersionedTransaction>
+}): Promise<string> {
+  // 1. Fetch full position data to get bin IDs
+  const userPositions = await getUserPositions(userPublicKey.toString(), poolAddress)
+  const fullPosition = userPositions.find((p) => p.publicKey === positionMint)
+
+  if (!fullPosition) {
+    throw new Error('Position not found')
+  }
+
+  // 2. Extract bin IDs from position data
+  const binIds = fullPosition.positionData.positionBinData.map((bin) => bin.binId)
+
+  if (binIds.length === 0) {
+    throw new Error('No bins found in position')
+  }
+
+  console.log('[Execute Remove Liquidity]', {
+    positionMint,
+    poolAddress,
+    binIds,
+  })
+
+  // 3. Build remove liquidity transaction
+  const txOrTxs = await removeLiquidityAndClose({
+    poolAddress,
+    userPublicKey,
+    positionPublicKey: new PublicKey(positionMint),
+    binIdsToRemove: binIds,
+    shouldClaimAndClose: true,
+  })
+
+  // 4. Sign and send via Sanctum (handles blockhash, fees, multi-validator delivery)
+  const transactions = Array.isArray(txOrTxs) ? txOrTxs : [txOrTxs]
+  let lastSignature = ''
+
+  for (const transaction of transactions) {
+    const signature = await sendViaSanctum(
+      transaction,
+      connection,
+      { signTransaction },
+      { waitForCommitment: 'confirmed' }
+    )
+    lastSignature = signature
+  }
+
+  return lastSignature
+}
+
+/**
+ * Handle remove liquidity errors with user-friendly messages
+ * @param error - The error to handle
+ * @returns User-friendly error message
+ */
+export function handleRemoveLiquidityError(error: unknown): string {
+  if (error instanceof Error) {
+    if (error.message.includes('User rejected')) {
+      return 'Transaction was rejected by user'
+    } else if (error.message.includes('insufficient lamports')) {
+      return 'Insufficient SOL for transaction fees'
+    } else if (error.message.includes('Transaction simulation failed')) {
+      return 'Transaction simulation failed. Please try again.'
+    } else if (error.message.includes('Position not found')) {
+      return 'Position not found. It may have already been closed.'
+    } else if (error.message.includes('No bins found')) {
+      return 'Position has no liquidity to remove'
+    }
+    return error.message
+  }
+  return 'Failed to remove liquidity'
+}
+
+/**
  * Close a position (must have zero liquidity)
  * Note: Use removeLiquidityAndClose with shouldClaimAndClose=true instead.
  * This function requires the full position object from the SDK.
@@ -158,26 +249,78 @@ export async function removeLiquidityAndClose(
 // }
 
 /**
- * Claim swap fees for a single position
- * @param poolAddress - The pool's public key address
- * @param userPublicKey - User's public key
- * @param positionPublicKey - Position's public key
- * @returns Transaction
+ * Execute claim fees transaction with full flow
+ * Handles position fetching, transaction building, and sending via Sanctum
+ * @param params - Execution parameters
+ * @returns Transaction signature
  */
-// export async function claimSwapFee(
-//   poolAddress: string,
-//   userPublicKey: PublicKey,
-//   positionPublicKey: PublicKey
-// ): Promise<Transaction> {
-//   const dlmmPool = await getDLMMPool(poolAddress)
+export async function executeClaimFees({
+  poolAddress,
+  positionMint,
+  userPublicKey,
+  connection,
+  signTransaction,
+}: {
+  poolAddress: string
+  positionMint: string
+  userPublicKey: PublicKey
+  connection: Connection
+  signTransaction: (tx: Transaction | VersionedTransaction) => Promise<Transaction | VersionedTransaction>
+}): Promise<string> {
+  console.log('[Execute Claim Fees]', {
+    positionMint,
+    poolAddress,
+  })
 
-//   const transaction = await dlmmPool.claimSwapFee({
-//     owner: userPublicKey,
-//     position: positionPublicKey,
-//   })
+  // Fetch DLMM pool to access claim method
+  const dlmmPool = await getDLMMPool(poolAddress)
+  
+  // Fetch position directly by public key (more efficient than fetching all positions)
+  const position = await dlmmPool.getPosition(new PublicKey(positionMint))
 
-//   return transaction
-// }
+  // Build claim fees transaction
+  const txOrTxs = await dlmmPool.claimSwapFee({
+    owner: userPublicKey,
+    position,
+  })
+
+  // Handle single or array of transactions
+  const transactions = Array.isArray(txOrTxs) ? txOrTxs : [txOrTxs]
+  let lastSignature = ''
+
+  for (const transaction of transactions) {
+    const signature = await sendViaSanctum(
+      transaction,
+      connection,
+      { signTransaction },
+      { waitForCommitment: 'confirmed' }
+    )
+    lastSignature = signature
+  }
+
+  return lastSignature
+}
+
+/**
+ * Handle claim fees errors with user-friendly messages
+ * @param error - The error to handle
+ * @returns User-friendly error message
+ */
+export function handleClaimFeesError(error: unknown): string {
+  if (error instanceof Error) {
+    if (error.message.includes('User rejected')) {
+      return 'Transaction was rejected by user'
+    } else if (error.message.includes('insufficient lamports')) {
+      return 'Insufficient SOL for transaction fees'
+    } else if (error.message.includes('Transaction simulation failed')) {
+      return 'Transaction simulation failed. Please try again.'
+    } else if (error.message.includes('Position not found')) {
+      return 'Position not found. It may have already been closed.'
+    }
+    return error.message
+  }
+  return 'Failed to claim fees'
+}
 
 /**
  * Claim all swap fees for multiple positions

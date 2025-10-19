@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/card'
 import MeteoraActionRail, { type MeteoraActionDefinition } from './MeteoraActionRail'
 import MeteoraDiscover from './MeteoraDiscover'
 import MeteoraManage from './MeteoraManage'
+import MeteoraProfile from './MeteoraProfile'
 import { useMeteoraStore, useMeteoraDataStore, type MeteoraView } from '../state'
 import type { MeteoraPool } from '@/modules/meteora/types/domain'
 
@@ -40,10 +41,8 @@ const MeteoraAction = () => {
         return <MeteoraManage onBack={handleBackToDiscover} />
       case 'profile':
         return (
-          <Card className="h-full rounded-2xl p-1 overflow-y-auto">
-            <div className="p-4 text-center text-muted-foreground">
-              Profile view - Coming soon
-            </div>
+          <Card className="h-full rounded-2xl p-1">
+            <MeteoraProfile />
           </Card>
         )
       case 'discover':

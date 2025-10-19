@@ -151,3 +151,46 @@ export interface MeteoraDLMMPoolCache {
   instance: any // DLMM instance from SDK
   createdAt: number
 }
+
+// Profile types for portfolio view
+export interface MeteoraProfilePosition {
+  positionMint: string
+  poolAddress: string
+  poolName: string
+  tokenXSymbol: string
+  tokenYSymbol: string
+  tokenXDecimals: number
+  tokenYDecimals: number
+  tokenXAmount: number
+  tokenYAmount: number
+  lowerBinId: number
+  upperBinId: number
+  minPrice: number | null
+  maxPrice: number | null
+  totalBins: number
+  unclaimedFeeX: number
+  unclaimedFeeY: number
+  unclaimedFeeXValue: number | null
+  unclaimedFeeYValue: number | null
+  totalValue: number | null
+}
+
+export interface MeteoraProfilePoolGroup {
+  poolAddress: string
+  poolName: string
+  tokenXMint: string
+  tokenYMint: string
+  tokenXSymbol: string
+  tokenYSymbol: string
+  apy: number
+  tvl: number
+  binStep: number
+  positions: MeteoraProfilePosition[]
+}
+
+export interface MeteoraPortfolioStats {
+  totalValue: number
+  totalPositions: number
+  totalPools: number
+  totalUnclaimedFees: number
+}

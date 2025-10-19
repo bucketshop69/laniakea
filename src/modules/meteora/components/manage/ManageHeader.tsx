@@ -1,4 +1,4 @@
-import { ArrowLeft, MinusCircle, PlusCircle } from 'lucide-react'
+import { ArrowLeft, MinusCircle, PlusCircle, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { MeteoraManageTab } from '../../state'
 
@@ -9,6 +9,8 @@ interface ManageHeaderProps {
   priceToneClass: string
   activeTab: MeteoraManageTab
   onTabChange: (tab: MeteoraManageTab) => void
+  onRefresh: () => void
+  isRefreshing?: boolean
 }
 
 const ManageHeader = ({
@@ -18,6 +20,8 @@ const ManageHeader = ({
   priceToneClass,
   activeTab,
   onTabChange,
+  onRefresh,
+  isRefreshing = false,
 }: ManageHeaderProps) => {
   const tabs: Array<{ id: MeteoraManageTab; label: string; icon: typeof PlusCircle }> = [
     { id: 'add', label: 'Add', icon: PlusCircle },
@@ -41,6 +45,17 @@ const ManageHeader = ({
           <span className="leading-none text-sm font-medium text-primary">{label}</span>
           <span className={priceToneClass}>{priceLabel}</span>
         </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-muted-foreground"
+          onClick={onRefresh}
+          disabled={isRefreshing}
+          aria-label="Refresh balances and positions"
+        >
+          <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+        </Button>
       </div>
 
       <div className="flex items-center gap-1">
