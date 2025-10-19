@@ -97,48 +97,61 @@ export async function addLiquidityToPosition(
 }
 
 /**
- * Remove liquidity from a position
+ * Remove all liquidity from a position and close it
  * @param params - Remove liquidity parameters
  * @returns Transaction or array of transactions
  */
-// export async function removeLiquidity(
-//   params: RemoveLiquidityParams
-// ): Promise<Transaction | Transaction[]> {
-//   const dlmmPool = await getDLMMPool(params.poolAddress)
+export async function removeLiquidityAndClose(
+  params: RemoveLiquidityParams
+): Promise<Transaction | Transaction[]> {
+  const dlmmPool = await getDLMMPool(params.poolAddress)
 
-//   const liquiditiesBpsToRemove = new Array(params.binIdsToRemove.length).fill(
-//     new BN(100 * 100) // 100% removal in basis points
-//   )
+  console.log('[Remove Liquidity]', {
+    position: params.positionPublicKey.toString(),
+    user: params.userPublicKey.toString(),
+    binIdsToRemove: params.binIdsToRemove,
+    shouldClaimAndClose: params.shouldClaimAndClose,
+  })
 
-//   const transaction = await dlmmPool.removeLiquidity({
-//     position: params.positionPublicKey,
-//     user: params.userPublicKey,
-//     fromBinId: params.binIdsToRemove[0],
-//     toBinId: params.binIdsToRemove[params.binIdsToRemove.length - 1],
-//     liquiditiesBpsToRemove,
-//     shouldClaimAndClose: params.shouldClaimAndClose,
-//   })
+  // Remove 100% of liquidity from all bins
+  const bps = new BN(100 * 100) // 100% removal in basis points
+  
+  // Sort bin IDs to get min and max
+  const sortedBins = [...params.binIdsToRemove].sort((a, b) => a - b)
+  const fromBinId = sortedBins[0]
+  const toBinId = sortedBins[sortedBins.length - 1]
 
-//   return transaction
-// }
+  const transaction = await dlmmPool.removeLiquidity({
+    position: params.positionPublicKey,
+    user: params.userPublicKey,
+    fromBinId,
+    toBinId,
+    bps,
+    shouldClaimAndClose: params.shouldClaimAndClose,
+  })
+
+  return transaction
+}
 
 /**
- * Close a position
+ * Close a position (must have zero liquidity)
+ * Note: Use removeLiquidityAndClose with shouldClaimAndClose=true instead.
+ * This function requires the full position object from the SDK.
  * @param poolAddress - The pool's public key address
  * @param userPublicKey - User's public key
- * @param positionPublicKey - Position's public key
+ * @param position - Full position object from getUserPositions
  * @returns Transaction
  */
 // export async function closePosition(
 //   poolAddress: string,
 //   userPublicKey: PublicKey,
-//   positionPublicKey: PublicKey
+//   position: any
 // ): Promise<Transaction> {
 //   const dlmmPool = await getDLMMPool(poolAddress)
 
 //   const transaction = await dlmmPool.closePosition({
 //     owner: userPublicKey,
-//     position: positionPublicKey,
+//     position,
 //   })
 
 //   return transaction

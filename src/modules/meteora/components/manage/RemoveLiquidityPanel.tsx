@@ -7,6 +7,8 @@ export interface MeteoraDisplayPosition {
   position: string
   lowerBinId: number
   upperBinId: number
+  minPrice: number | null
+  maxPrice: number | null
   totalBins: number
   baseAmount: number
   quoteAmount: number
@@ -105,7 +107,9 @@ const RemoveLiquidityPanel = ({
             const valueLabel = position.totalValue !== null
               ? `≈ ${formatValueAmount(position.totalValue)} ${quoteSymbol}`
               : '—'
-            const rangeLabel = `${formatInteger(position.lowerBinId)} → ${formatInteger(position.upperBinId)}`
+            const rangeLabel = position.minPrice !== null && position.maxPrice !== null
+              ? `$${position.minPrice.toFixed(4)} → $${position.maxPrice.toFixed(4)}`
+              : `${formatInteger(position.lowerBinId)} → ${formatInteger(position.upperBinId)}`
             return (
               <Card key={position.positionMint} className="rounded-lg border border-border/50 bg-card/40 p-3">
                 <div className="flex items-center justify-between text-[11px] font-medium text-primary/80">

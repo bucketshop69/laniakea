@@ -20,8 +20,8 @@ const ManageHeader = ({
   onTabChange,
 }: ManageHeaderProps) => {
   const tabs: Array<{ id: MeteoraManageTab; label: string; icon: typeof PlusCircle }> = [
-    { id: 'add', label: 'Add Liquidity', icon: PlusCircle },
-    { id: 'remove', label: 'Remove Liquidity', icon: MinusCircle },
+    { id: 'add', label: 'Add', icon: PlusCircle },
+    { id: 'remove', label: 'Remove', icon: MinusCircle },
   ]
 
   return (

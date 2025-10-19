@@ -9,7 +9,7 @@ import { useWalletBalanceStore, type WalletTokenBalance } from '@/store/walletBa
 import { useMeteoraStore, useMeteoraDataStore, type MeteoraManageTab } from '../state'
 import { useMeteoraBinDistribution } from '../hooks/useFetchBinDistribution'
 import { getActiveBin, getBinIdFromPrice, getUserPositions } from '../services/positions'
-import { createPositionAndAddLiquidity, addLiquidityToPosition } from '../services/liquidity'
+import { createPositionAndAddLiquidity, addLiquidityToPosition, removeLiquidityAndClose } from '../services/liquidity'
 import { StrategyType } from '../types/domain'
 import ManageHeader from './manage/ManageHeader'
 import AddLiquidityForm from './manage/AddLiquidityForm'
@@ -42,6 +42,14 @@ const MeteoraManage = ({ onBack }: MeteoraManageProps) => {
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [isAdding, setIsAdding] = useState(false)
 
+  // State for remove liquidity
+  const [removeError, setRemoveError] = useState<string | null>(null)
+  const [removeSuccess, setRemoveSuccess] = useState<string | null>(null)
+  const [removingMint, setRemovingMint] = useState<string | null>(null)
+  const [positionsLoading, setPositionsLoading] = useState(false)
+  const [positionsError, setPositionsError] = useState<string | null>(null)
+  const [positions, setPositions] = useState<MeteoraDisplayPosition[]>([])
+
   // Auto-dismiss error message after 30 seconds
   useEffect(() => {
     if (!errorMessage) return
@@ -64,13 +72,27 @@ const MeteoraManage = ({ onBack }: MeteoraManageProps) => {
     return () => clearTimeout(timer)
   }, [successMessage])
 
-  // State for remove liquidity
-  const [removeError] = useState<string | null>(null)
-  const [removeSuccess] = useState<string | null>(null)
-  const [removingMint] = useState<string | null>(null)
-  const [positionsLoading] = useState(false)
-  const [positionsError] = useState<string | null>(null)
-  const [positions] = useState<MeteoraDisplayPosition[]>([])
+  // Auto-dismiss remove error message after 30 seconds
+  useEffect(() => {
+    if (!removeError) return
+
+    const timer = setTimeout(() => {
+      setRemoveError(null)
+    }, 30000)
+
+    return () => clearTimeout(timer)
+  }, [removeError])
+
+  // Auto-dismiss remove success message after 30 seconds
+  useEffect(() => {
+    if (!removeSuccess) return
+
+    const timer = setTimeout(() => {
+      setRemoveSuccess(null)
+    }, 30000)
+
+    return () => clearTimeout(timer)
+  }, [removeSuccess])
 
   // Wallet balance integration
   const refreshBalances = useWalletBalanceStore((state) => state.refreshBalances)
@@ -197,6 +219,72 @@ const MeteoraManage = ({ onBack }: MeteoraManageProps) => {
 
     void refreshBalances(connection, publicKey, mintAddresses, { force: true })
   }, [connected, publicKey, pool, baseMint, quoteMint, connection, refreshBalances])
+
+  // Fetch user positions when on remove tab
+  useEffect(() => {
+    if (tab !== 'remove' || !connected || !publicKey || !poolAddress) {
+      return
+    }
+
+    setPositionsLoading(true)
+    setPositionsError(null)
+
+    getUserPositions(publicKey.toString(), poolAddress)
+      .then((userPositions) => {
+        console.log('[Meteora Manage] User positions fetched', {
+          count: userPositions.length,
+          positions: userPositions,
+        })
+
+        // Convert to display format
+        const displayPositions: MeteoraDisplayPosition[] = userPositions.map((pos) => {
+          const baseDecimals = baseTokenBalance?.decimals ?? 9
+          const quoteDecimals = quoteTokenBalance?.decimals ?? 9
+
+          const baseAmount = parseFloat(pos.positionData.totalXAmount) / Math.pow(10, baseDecimals)
+          const quoteAmount = parseFloat(pos.positionData.totalYAmount) / Math.pow(10, quoteDecimals)
+
+          // Estimate total value in quote token
+          const totalValue = pool?.current_price 
+            ? baseAmount * pool.current_price + quoteAmount 
+            : null
+
+          // Get bin IDs and prices for the position
+          const lowerBinId = pos.positionAccount.lowerBinId
+          const upperBinId = pos.positionAccount.upperBinId
+          const totalBins = pos.positionData.positionBinData.length
+
+          // Find min and max prices from bin data
+          const minPrice = pos.positionData.positionBinData.length > 0
+            ? Math.min(...pos.positionData.positionBinData.map(bin => bin.pricePerToken))
+            : null
+          const maxPrice = pos.positionData.positionBinData.length > 0
+            ? Math.max(...pos.positionData.positionBinData.map(bin => bin.pricePerToken))
+            : null
+
+          return {
+            positionMint: pos.publicKey,
+            position: pos.publicKey,
+            lowerBinId,
+            upperBinId,
+            minPrice,
+            maxPrice,
+            totalBins,
+            baseAmount,
+            quoteAmount,
+            totalValue,
+          }
+        })
+
+        setPositions(displayPositions)
+        setPositionsLoading(false)
+      })
+      .catch((error) => {
+        console.error('[Meteora Manage] Failed to fetch positions', error)
+        setPositionsError(error instanceof Error ? error.message : 'Failed to fetch positions')
+        setPositionsLoading(false)
+      })
+  }, [tab, connected, publicKey, poolAddress, pool, baseTokenBalance?.decimals, quoteTokenBalance?.decimals])
 
   if (!pool) {
     return (
@@ -783,12 +871,149 @@ const MeteoraManage = ({ onBack }: MeteoraManageProps) => {
     }
   }
 
-  const handleRemoveLiquidity = (position: MeteoraDisplayPosition) => {
+  const handleRemoveLiquidity = async (position: MeteoraDisplayPosition) => {
     if (!connected || !publicKey) {
       setWalletModalVisible(true)
       return
     }
-    console.log('Remove liquidity clicked for position:', position)
+
+    if (!poolAddress || !pool) {
+      setRemoveError('No pool selected')
+      return
+    }
+
+    setRemoveError(null)
+    setRemoveSuccess(null)
+    setRemovingMint(position.positionMint)
+
+    try {
+      console.log('[Meteora Manage] Removing liquidity from position', {
+        positionMint: position.positionMint,
+        poolAddress,
+        lowerBinId: position.lowerBinId,
+        upperBinId: position.upperBinId,
+        totalBins: position.totalBins,
+        baseAmount: position.baseAmount,
+        quoteAmount: position.quoteAmount,
+      })
+
+      // Fetch the full position data to get bin IDs
+      const userPositions = await getUserPositions(publicKey.toString(), poolAddress)
+      const fullPosition = userPositions.find(p => p.publicKey === position.positionMint)
+
+      if (!fullPosition) {
+        throw new Error('Position not found')
+      }
+
+      // Extract bin IDs from position data
+      const binIds = fullPosition.positionData.positionBinData.map(bin => bin.binId)
+
+      if (binIds.length === 0) {
+        throw new Error('No bins found in position')
+      }
+
+      console.log('[Meteora Manage] Removing liquidity from bins', {
+        binIds,
+        binCount: binIds.length,
+      })
+
+      // Create remove liquidity transaction
+      const txOrTxs = await removeLiquidityAndClose({
+        poolAddress,
+        userPublicKey: publicKey,
+        positionPublicKey: new PublicKey(position.positionMint),
+        binIdsToRemove: binIds,
+        shouldClaimAndClose: true, // Remove all liquidity and close position
+      })
+
+      // Send via Sanctum (builder will handle blockhash/fees/tips)
+      if (!signTransaction) throw new Error('Wallet does not support transaction signing')
+
+      // Handle single transaction or array of transactions
+      const transactions = Array.isArray(txOrTxs) ? txOrTxs : [txOrTxs]
+      
+      let lastSignature = ''
+      for (const transaction of transactions) {
+        const signature = await sendViaSanctum(
+          transaction,
+          connection,
+          { signTransaction },
+          { waitForCommitment: 'confirmed' }
+        )
+        lastSignature = signature
+        console.log('[Meteora Manage] Liquidity removed via Sanctum', { signature })
+      }
+      
+      const signature = lastSignature
+
+      setRemoveSuccess(`Liquidity removed! Tx: ${signature}`)
+
+      // Refresh positions and balances
+      const mintAddresses = [baseMint, quoteMint].filter((mint): mint is string => Boolean(mint))
+      await refreshBalances(connection, publicKey, mintAddresses, { force: true })
+
+      // Refresh positions list
+      const updatedPositions = await getUserPositions(publicKey.toString(), poolAddress)
+      const displayPositions: MeteoraDisplayPosition[] = updatedPositions.map((pos) => {
+        const baseDecimals = baseTokenBalance?.decimals ?? 9
+        const quoteDecimals = quoteTokenBalance?.decimals ?? 9
+
+        const baseAmount = parseFloat(pos.positionData.totalXAmount) / Math.pow(10, baseDecimals)
+        const quoteAmount = parseFloat(pos.positionData.totalYAmount) / Math.pow(10, quoteDecimals)
+
+        const totalValue = pool?.current_price 
+          ? baseAmount * pool.current_price + quoteAmount 
+          : null
+
+        const lowerBinId = pos.positionAccount.lowerBinId
+        const upperBinId = pos.positionAccount.upperBinId
+        const totalBins = pos.positionData.positionBinData.length
+
+        // Find min and max prices from bin data
+        const minPrice = pos.positionData.positionBinData.length > 0
+          ? Math.min(...pos.positionData.positionBinData.map(bin => bin.pricePerToken))
+          : null
+        const maxPrice = pos.positionData.positionBinData.length > 0
+          ? Math.max(...pos.positionData.positionBinData.map(bin => bin.pricePerToken))
+          : null
+
+        return {
+          positionMint: pos.publicKey,
+          position: pos.publicKey,
+          lowerBinId,
+          upperBinId,
+          minPrice,
+          maxPrice,
+          totalBins,
+          baseAmount,
+          quoteAmount,
+          totalValue,
+        }
+      })
+
+      setPositions(displayPositions)
+
+    } catch (error) {
+      console.error('[Meteora Manage] Remove liquidity failed', error)
+
+      let errorMsg = 'Failed to remove liquidity'
+
+      if (error instanceof Error) {
+        if (error.message.includes('User rejected')) {
+          errorMsg = 'Transaction was rejected by user'
+        } else if (error.message.includes('insufficient lamports')) {
+          errorMsg = 'Insufficient SOL for transaction fees'
+        } else if (error.message.includes('Transaction simulation failed')) {
+          errorMsg = 'Transaction simulation failed. Please try again.'
+        } else {
+          errorMsg = error.message
+        }
+      }
+
+      setRemoveError(errorMsg)
+    } finally {
+      setRemovingMint(null)
+    }
   }
 
   return (
