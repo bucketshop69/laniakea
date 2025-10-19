@@ -6,6 +6,7 @@ import { LiquidityShape, RemoveLiquidityType } from '@saros-finance/dlmm-sdk/typ
 import { useWallet } from '@solana/wallet-adapter-react'
 import { useWalletModal } from '@solana/wallet-adapter-react-ui'
 import { PublicKey, Transaction as Web3Transaction, Keypair, LAMPORTS_PER_SOL } from '@solana/web3.js'
+import { sendManyViaSanctum, sendViaSanctum } from '@/lib/sanctumGateway'
 import { createUniformDistribution, getMaxBinArray } from '@saros-finance/dlmm-sdk/utils'
 import { getIdFromPrice, getPriceFromId } from '@saros-finance/dlmm-sdk/utils/price'
 import { BIN_ARRAY_SIZE } from '@saros-finance/dlmm-sdk/constants'
@@ -666,39 +667,15 @@ const SarosManage = ({ onBack }: SarosManageProps) => {
 
       transactions.push(addLiquidityTx)
 
-      let signedTxs: Web3Transaction[]
-      if (signAllTransactions) {
-        signedTxs = await signAllTransactions(transactions)
-      } else if (signTransaction) {
-        signedTxs = []
-        for (const tx of transactions) {
-          signedTxs.push(await signTransaction(tx))
-        }
-      } else {
-        throw new Error('Connected wallet does not support transaction signing')
-      }
-
-      if (positionMintKeypair) {
-        for (const tx of signedTxs) {
-          const signerEntry = tx.signatures.find((entry) => entry.publicKey.equals(positionMintKeypair.publicKey))
-          if (signerEntry && !signerEntry.signature) {
-            tx.partialSign(positionMintKeypair)
-          }
-        }
-      }
-
       const signatures: string[] = []
-      for (const signedTx of signedTxs) {
-        const signature = await lbConnection.sendRawTransaction(signedTx.serialize(), {
-          skipPreflight: false,
-          preflightCommitment: 'confirmed',
-        })
-        signatures.push(signature)
-
-        await lbConnection.confirmTransaction(
-          { signature, blockhash, lastValidBlockHeight },
-          'finalized'
+      for (const tx of transactions) {
+        const sig = await sendViaSanctum(
+          tx,
+          lbConnection,
+          { signTransaction: signTransaction! },
+          { additionalSigners: positionMintKeypair ? [positionMintKeypair] : undefined, waitForCommitment: 'finalized' }
         )
+        signatures.push(sig)
       }
 
       setSuccessMessage(`Liquidity added successfully! Signature: ${signatures[signatures.length - 1]}`)
@@ -855,30 +832,15 @@ const SarosManage = ({ onBack }: SarosManageProps) => {
         console.warn('[Saros Manage] Unable to estimate remove liquidity fee', feeError)
       }
 
-      let signedTxs: Web3Transaction[]
-      if (signAllTransactions) {
-        signedTxs = await signAllTransactions(transactions)
-      } else if (signTransaction) {
-        signedTxs = []
-        for (const tx of transactions) {
-          signedTxs.push(await signTransaction(tx))
-        }
-      } else {
-        throw new Error('Connected wallet does not support transaction signing')
-      }
-
       const signatures: string[] = []
-      for (const signedTx of signedTxs) {
-        const signature = await serviceConnection.sendRawTransaction(signedTx.serialize(), {
-          skipPreflight: false,
-          preflightCommitment: 'confirmed',
-        })
-        signatures.push(signature)
-
-        await serviceConnection.confirmTransaction(
-          { signature, blockhash, lastValidBlockHeight },
-          'finalized'
+      for (const tx of transactions) {
+        const sig = await sendViaSanctum(
+          tx,
+          serviceConnection,
+          { signTransaction: signTransaction! },
+          { waitForCommitment: 'finalized' }
         )
+        signatures.push(sig)
       }
 
       setRemoveSuccess(`Liquidity removed successfully! Signature: ${signatures[signatures.length - 1]}`)

@@ -14,6 +14,7 @@ import { StrategyType } from '../types/domain'
 import ManageHeader from './manage/ManageHeader'
 import AddLiquidityForm from './manage/AddLiquidityForm'
 import RemoveLiquidityPanel, { type MeteoraDisplayPosition } from './manage/RemoveLiquidityPanel'
+import { sendViaSanctum } from '@/lib/sanctumGateway'
 
 interface MeteoraManageProps {
   onBack: () => void
@@ -30,7 +31,7 @@ const MeteoraManage = ({ onBack }: MeteoraManageProps) => {
   const poolAddress = pool?.address ?? null
   const manageForm = useMeteoraStore((state) => (poolAddress ? state.manageForms[poolAddress] : undefined))
   const updateManageForm = useMeteoraStore((state) => state.updateManageForm)
-  const { signTransaction, sendTransaction } = useWallet()
+  const { signTransaction } = useWallet()
 
   const tab: MeteoraManageTab = manageForm?.tab ?? 'add'
   const baseAmountInput = manageForm?.baseAmountInput ?? ''
@@ -40,6 +41,28 @@ const MeteoraManage = ({ onBack }: MeteoraManageProps) => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [isAdding, setIsAdding] = useState(false)
+
+  // Auto-dismiss error message after 30 seconds
+  useEffect(() => {
+    if (!errorMessage) return
+
+    const timer = setTimeout(() => {
+      setErrorMessage(null)
+    }, 30000) // 30 seconds
+
+    return () => clearTimeout(timer)
+  }, [errorMessage])
+
+  // Auto-dismiss success message after 30 seconds
+  useEffect(() => {
+    if (!successMessage) return
+
+    const timer = setTimeout(() => {
+      setSuccessMessage(null)
+    }, 30000) // 30 seconds
+
+    return () => clearTimeout(timer)
+  }, [successMessage])
 
   // State for remove liquidity
   const [removeError] = useState<string | null>(null)
@@ -348,7 +371,9 @@ const MeteoraManage = ({ onBack }: MeteoraManageProps) => {
     return binsInRange.length
   }, [minBinId, maxBinId, binData])
 
-  const isAddDisabled = !baseAmountInput || !quoteAmountInput || minBinId === null || maxBinId === null
+  // Allow submission if at least one token amount is provided (one-sided positions supported)
+  const hasAnyAmount = (baseAmountInput && parseFloat(baseAmountInput) > 0) || (quoteAmountInput && parseFloat(quoteAmountInput) > 0)
+  const isAddDisabled = !hasAnyAmount || minBinId === null || maxBinId === null
 
   // Handle range change from bin chart
   const handleRangeChange = (newMinBinId: number, newMaxBinId: number) => {
@@ -383,29 +408,64 @@ const MeteoraManage = ({ onBack }: MeteoraManageProps) => {
   const validateAmounts = useCallback(() => {
     const errors: string[] = []
 
-    // Parse amounts
-    const baseAmount = parseFloat(baseAmountInput)
-    const quoteAmount = parseFloat(quoteAmountInput)
+    // Parse amounts (allow 0 for one-sided positions)
+    const baseAmount = baseAmountInput ? parseFloat(baseAmountInput) : 0
+    const quoteAmount = quoteAmountInput ? parseFloat(quoteAmountInput) : 0
 
-    // Check if amounts are valid numbers
-    if (!baseAmountInput || !Number.isFinite(baseAmount) || baseAmount <= 0) {
+    // At least one token must have a valid amount > 0 (one-sided positions are allowed)
+    const hasBaseAmount = baseAmountInput && Number.isFinite(baseAmount) && baseAmount > 0
+    const hasQuoteAmount = quoteAmountInput && Number.isFinite(quoteAmount) && quoteAmount > 0
+
+    if (!hasBaseAmount && !hasQuoteAmount) {
+      errors.push(`Enter at least one token amount (one-sided positions are supported)`)
+    }
+
+    // Validate individual amounts if provided
+    if (baseAmountInput && (!Number.isFinite(baseAmount) || baseAmount < 0)) {
       errors.push(`Invalid ${baseSymbol} amount`)
     }
 
-    if (!quoteAmountInput || !Number.isFinite(quoteAmount) || quoteAmount <= 0) {
+    if (quoteAmountInput && (!Number.isFinite(quoteAmount) || quoteAmount < 0)) {
       errors.push(`Invalid ${quoteSymbol} amount`)
     }
 
-    // Check if user has sufficient balance
-    if (baseTokenBalance && Number.isFinite(baseAmount) && baseAmount > 0) {
-      if (baseAmount > baseTokenBalance.uiAmount) {
-        errors.push(`Insufficient ${baseSymbol} balance (available: ${formatAvailable(baseTokenBalance)})`)
+    // Reserve for rent and transaction fees when using native SOL
+    const SOL_RENT_RESERVE = 0.0575 // Reserve 0.0575 SOL for creating position (rent-exempt + fees)
+
+    // Check if user has sufficient balance (only validate if amount is provided)
+    if (hasBaseAmount && baseTokenBalance && Number.isFinite(baseAmount) && baseAmount > 0) {
+      const isNativeSOL = baseMint === NATIVE_SOL_MINT
+      const maxAvailable = isNativeSOL
+        ? Math.max(0, baseTokenBalance.uiAmount - SOL_RENT_RESERVE)
+        : baseTokenBalance.uiAmount
+
+      if (baseAmount > maxAvailable) {
+        if (isNativeSOL) {
+          errors.push(
+            `Insufficient ${baseSymbol} balance. Reserve ${SOL_RENT_RESERVE} SOL for fees. ` +
+            `(available: ${formatAvailable({ ...baseTokenBalance, uiAmount: maxAvailable })})`
+          )
+        } else {
+          errors.push(`Insufficient ${baseSymbol} balance (available: ${formatAvailable(baseTokenBalance)})`)
+        }
       }
     }
 
-    if (quoteTokenBalance && Number.isFinite(quoteAmount) && quoteAmount > 0) {
-      if (quoteAmount > quoteTokenBalance.uiAmount) {
-        errors.push(`Insufficient ${quoteSymbol} balance (available: ${formatAvailable(quoteTokenBalance)})`)
+    if (hasQuoteAmount && quoteTokenBalance && Number.isFinite(quoteAmount) && quoteAmount > 0) {
+      const isNativeSOL = quoteMint === NATIVE_SOL_MINT
+      const maxAvailable = isNativeSOL
+        ? Math.max(0, quoteTokenBalance.uiAmount - SOL_RENT_RESERVE)
+        : quoteTokenBalance.uiAmount
+
+      if (quoteAmount > maxAvailable) {
+        if (isNativeSOL) {
+          errors.push(
+            `Insufficient ${quoteSymbol} balance. Reserve ${SOL_RENT_RESERVE} SOL for fees. ` +
+            `(available: ${formatAvailable({ ...quoteTokenBalance, uiAmount: maxAvailable })})`
+          )
+        } else {
+          errors.push(`Insufficient ${quoteSymbol} balance (available: ${formatAvailable(quoteTokenBalance)})`)
+        }
       }
     }
 
@@ -427,6 +487,8 @@ const MeteoraManage = ({ onBack }: MeteoraManageProps) => {
     baseSymbol,
     quoteSymbol,
     formatAvailable,
+    baseMint,
+    quoteMint,
   ])
 
   // Handle min price input - only validate and convert on blur (when user finishes typing)
@@ -589,9 +651,9 @@ const MeteoraManage = ({ onBack }: MeteoraManageProps) => {
       return
     }
 
-    // Parse amounts
-    const baseAmount = parseFloat(baseAmountInput)
-    const quoteAmount = parseFloat(quoteAmountInput)
+    // Parse amounts (allow 0 for one-sided positions)
+    const baseAmount = baseAmountInput ? parseFloat(baseAmountInput) : 0
+    const quoteAmount = quoteAmountInput ? parseFloat(quoteAmountInput) : 0
 
     if (minBinId === null || maxBinId === null) {
       setErrorMessage('Invalid price range')
@@ -616,6 +678,8 @@ const MeteoraManage = ({ onBack }: MeteoraManageProps) => {
     setIsAdding(true)
 
     try {
+      const isOneSided = baseAmount === 0 || quoteAmount === 0
+      const binRange = maxBinId - minBinId
       console.log('[Meteora Manage] Adding liquidity', {
         poolAddress,
         baseAmount,
@@ -624,7 +688,11 @@ const MeteoraManage = ({ onBack }: MeteoraManageProps) => {
         quoteAmountLamports: quoteAmountLamports.toString(),
         minBinId,
         maxBinId,
+        binRange,
         strategyType,
+        isOneSided,
+        oneSidedToken: baseAmount === 0 ? quoteSymbol : (quoteAmount === 0 ? baseSymbol : 'both'),
+        activeBinId,
       })
 
       // Check if user has existing positions in this bin range
@@ -665,44 +733,24 @@ const MeteoraManage = ({ onBack }: MeteoraManageProps) => {
         positionKeypair = result.positionKeypair
       }
 
-      // Sign and send transaction
-      console.log('[Meteora Manage] Signing transaction')
-
-      if (!signTransaction || !sendTransaction) {
-        throw new Error('Wallet does not support transaction signing')
-      }
-
-      // Get latest blockhash
-      const latestBlockhash = await connection.getLatestBlockhash()
-      transaction.recentBlockhash = latestBlockhash.blockhash
-      transaction.feePayer = publicKey
-
-      // Partially sign with position keypair if creating new position
+      // Pre-sign with position keypair BEFORE sending to Sanctum
+      // This ensures the signature survives Sanctum's transaction rebuild
       if (positionKeypair) {
         transaction.partialSign(positionKeypair)
+        console.log('[Meteora Manage] Transaction pre-signed with position keypair')
       }
 
-      // Sign with wallet
-      const signedTransaction = await signTransaction(transaction)
+      // Send via Sanctum (builder will handle blockhash/fees/tips and preserve signatures)
+      if (!signTransaction) throw new Error('Wallet does not support transaction signing')
+      const signature = await sendViaSanctum(
+        transaction,
+        connection,
+        { signTransaction },
+        { waitForCommitment: 'confirmed' }
+      )
+      console.log('[Meteora Manage] Transaction sent via Sanctum', { signature })
 
-      // Send transaction
-      const signature = await sendTransaction(signedTransaction, connection, {
-        skipPreflight: false,
-        preflightCommitment: 'confirmed',
-      })
-
-      console.log('[Meteora Manage] Transaction sent', { signature })
-
-      // Wait for confirmation
-      await connection.confirmTransaction({
-        signature,
-        blockhash: latestBlockhash.blockhash,
-        lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
-      }, 'confirmed')
-
-      console.log('[Meteora Manage] Transaction confirmed')
-
-      setSuccessMessage(`Liquidity added successfully! Signature: ${signature.slice(0, 8)}...`)
+      setSuccessMessage(`Liquidity added! Tx: ${signature}`)
 
       // Clear form
       updateForm({ baseAmountInput: '', quoteAmountInput: '' })
@@ -713,7 +761,22 @@ const MeteoraManage = ({ onBack }: MeteoraManageProps) => {
 
     } catch (error) {
       console.error('[Meteora Manage] Add liquidity failed', error)
-      const errorMsg = error instanceof Error ? error.message : 'Failed to add liquidity'
+
+      let errorMsg = 'Failed to add liquidity'
+
+      if (error instanceof Error) {
+        // Check for common error patterns
+        if (error.message.includes('insufficient lamports')) {
+          errorMsg = `Insufficient SOL for transaction fees and rent. Please ensure you have at least 0.0575 SOL extra for creating the position.`
+        } else if (error.message.includes('User rejected')) {
+          errorMsg = 'Transaction was rejected by user'
+        } else if (error.message.includes('Transaction simulation failed')) {
+          errorMsg = 'Transaction simulation failed. You may need more SOL for fees or the pool parameters are invalid.'
+        } else {
+          errorMsg = error.message
+        }
+      }
+
       setErrorMessage(errorMsg)
     } finally {
       setIsAdding(false)

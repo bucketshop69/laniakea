@@ -12,7 +12,7 @@ const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
  * @param poolAddress - The pool's public key address
  * @returns DLMM instance
  */
-export async function getDLMMPool(poolAddress: string): Promise<any> {
+export async function getDLMMPool(poolAddress: string): Promise<DLMM> {
   const connection = getMeteoraConnection()
 
   // Check cache

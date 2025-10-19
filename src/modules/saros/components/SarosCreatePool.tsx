@@ -4,6 +4,7 @@ import { useWalletModal } from '@solana/wallet-adapter-react-ui'
 import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { createSarosPool } from '../services/liquidity'
+import { sendViaSanctum } from '@/lib/sanctumGateway'
 import { getLiquidityBookService } from '../lib/liquidityBook'
 import { checkPoolExists, type SarosToken, type ExistingPool } from '../services/tokenService'
 import { useSarosStore } from '../state'
@@ -202,18 +203,8 @@ const SarosCreatePool = () => {
       if (!signTransaction) {
         throw new Error('Wallet does not support transaction signing')
       }
-      const signedTx = await signTransaction(tx as any)
-      console.log('🔵 Transaction signed successfully')
-
-      const signature = await connection.sendRawTransaction(signedTx.serialize(), {
-        skipPreflight: false,
-        preflightCommitment: 'confirmed',
-      })
-
-      await connection.confirmTransaction(
-        { signature, blockhash, lastValidBlockHeight },
-        'finalized'
-      )
+      const signature = await sendViaSanctum(tx as any, connection, { signTransaction: signTransaction! }, { waitForCommitment: 'finalized' })
+      console.log('🔵 Transaction sent via Sanctum')
 
       setSuccessMessage(`Pool created successfully! Transaction: ${signature}`)
 

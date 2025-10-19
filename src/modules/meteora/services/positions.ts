@@ -14,7 +14,7 @@ export async function getActiveBin(poolAddress: string): Promise<MeteoraActiveBi
   return {
     binId: activeBin.binId,
     price: activeBin.price,
-    pricePerToken: dlmmPool.fromPricePerLamport(Number(activeBin.price)),
+    pricePerToken: +dlmmPool.fromPricePerLamport(Number(activeBin.price)),
   }
 }
 
@@ -61,20 +61,6 @@ export async function getUserPositions(
   }))
 }
 
-/**
- * Get price from bin ID
- * @param poolAddress - The pool's public key address
- * @param binId - The bin ID
- * @returns Price as number
- */
-export async function getPriceFromBinId(
-  poolAddress: string,
-  binId: number
-): Promise<number> {
-  const dlmmPool = await getDLMMPool(poolAddress)
-  const price = dlmmPool.getPriceOfBinByBinId(binId)
-  return dlmmPool.fromPricePerLamport(Number(price))
-}
 
 /**
  * Get bin ID from price

@@ -11,6 +11,7 @@ export interface AddLiquidityParams {
   minBinId: number
   maxBinId: number
   strategyType: StrategyType
+  slippage?: number // Slippage tolerance in percentage (e.g., 1 = 1%)
   existingPositionPubKey?: PublicKey
 }
 
@@ -31,9 +32,22 @@ export async function createPositionAndAddLiquidity(
   params: AddLiquidityParams
 ): Promise<{ transaction: Transaction; positionKeypair: Keypair }> {
   const dlmmPool = await getDLMMPool(params.poolAddress)
+  console.log(dlmmPool.pubkey.toString());
 
   // Generate new position keypair
   const positionKeypair = Keypair.generate()
+  console.log("[Create position]", {
+    positionPubKey: positionKeypair.publicKey,
+    user: params.userPublicKey,
+    totalXAmount: params.totalXAmount,
+    totalYAmount: params.totalYAmount,
+    strategy: {
+      minBinId: params.minBinId,
+      maxBinId: params.maxBinId,
+      strategyType: params.strategyType,
+    },
+    slippage: params.slippage ?? 3, // Default 1% slippage if not provided
+  });
 
   // Create transaction
   const transaction = await dlmmPool.initializePositionAndAddLiquidityByStrategy({
@@ -46,6 +60,7 @@ export async function createPositionAndAddLiquidity(
       maxBinId: params.maxBinId,
       strategyType: params.strategyType,
     },
+    slippage: params.slippage ?? 1, // Default 1% slippage if not provided
   })
 
   return { transaction, positionKeypair }
@@ -75,6 +90,7 @@ export async function addLiquidityToPosition(
       maxBinId: params.maxBinId,
       strategyType: params.strategyType,
     },
+    slippage: params.slippage ?? 1, // Default 1% slippage if not provided
   })
 
   return transaction
@@ -85,26 +101,26 @@ export async function addLiquidityToPosition(
  * @param params - Remove liquidity parameters
  * @returns Transaction or array of transactions
  */
-export async function removeLiquidity(
-  params: RemoveLiquidityParams
-): Promise<Transaction | Transaction[]> {
-  const dlmmPool = await getDLMMPool(params.poolAddress)
+// export async function removeLiquidity(
+//   params: RemoveLiquidityParams
+// ): Promise<Transaction | Transaction[]> {
+//   const dlmmPool = await getDLMMPool(params.poolAddress)
 
-  const liquiditiesBpsToRemove = new Array(params.binIdsToRemove.length).fill(
-    new BN(100 * 100) // 100% removal in basis points
-  )
+//   const liquiditiesBpsToRemove = new Array(params.binIdsToRemove.length).fill(
+//     new BN(100 * 100) // 100% removal in basis points
+//   )
 
-  const transaction = await dlmmPool.removeLiquidity({
-    position: params.positionPublicKey,
-    user: params.userPublicKey,
-    fromBinId: params.binIdsToRemove[0],
-    toBinId: params.binIdsToRemove[params.binIdsToRemove.length - 1],
-    liquiditiesBpsToRemove,
-    shouldClaimAndClose: params.shouldClaimAndClose,
-  })
+//   const transaction = await dlmmPool.removeLiquidity({
+//     position: params.positionPublicKey,
+//     user: params.userPublicKey,
+//     fromBinId: params.binIdsToRemove[0],
+//     toBinId: params.binIdsToRemove[params.binIdsToRemove.length - 1],
+//     liquiditiesBpsToRemove,
+//     shouldClaimAndClose: params.shouldClaimAndClose,
+//   })
 
-  return transaction
-}
+//   return transaction
+// }
 
 /**
  * Close a position
@@ -113,20 +129,20 @@ export async function removeLiquidity(
  * @param positionPublicKey - Position's public key
  * @returns Transaction
  */
-export async function closePosition(
-  poolAddress: string,
-  userPublicKey: PublicKey,
-  positionPublicKey: PublicKey
-): Promise<Transaction> {
-  const dlmmPool = await getDLMMPool(poolAddress)
+// export async function closePosition(
+//   poolAddress: string,
+//   userPublicKey: PublicKey,
+//   positionPublicKey: PublicKey
+// ): Promise<Transaction> {
+//   const dlmmPool = await getDLMMPool(poolAddress)
 
-  const transaction = await dlmmPool.closePosition({
-    owner: userPublicKey,
-    position: positionPublicKey,
-  })
+//   const transaction = await dlmmPool.closePosition({
+//     owner: userPublicKey,
+//     position: positionPublicKey,
+//   })
 
-  return transaction
-}
+//   return transaction
+// }
 
 /**
  * Claim swap fees for a single position
@@ -135,20 +151,20 @@ export async function closePosition(
  * @param positionPublicKey - Position's public key
  * @returns Transaction
  */
-export async function claimSwapFee(
-  poolAddress: string,
-  userPublicKey: PublicKey,
-  positionPublicKey: PublicKey
-): Promise<Transaction> {
-  const dlmmPool = await getDLMMPool(poolAddress)
+// export async function claimSwapFee(
+//   poolAddress: string,
+//   userPublicKey: PublicKey,
+//   positionPublicKey: PublicKey
+// ): Promise<Transaction> {
+//   const dlmmPool = await getDLMMPool(poolAddress)
 
-  const transaction = await dlmmPool.claimSwapFee({
-    owner: userPublicKey,
-    position: positionPublicKey,
-  })
+//   const transaction = await dlmmPool.claimSwapFee({
+//     owner: userPublicKey,
+//     position: positionPublicKey,
+//   })
 
-  return transaction
-}
+//   return transaction
+// }
 
 /**
  * Claim all swap fees for multiple positions
@@ -157,20 +173,20 @@ export async function claimSwapFee(
  * @param positions - Array of position objects with publicKey
  * @returns Array of transactions
  */
-export async function claimAllSwapFees(
-  poolAddress: string,
-  userPublicKey: PublicKey,
-  positions: Array<{ publicKey: string }>
-): Promise<Transaction[]> {
-  const dlmmPool = await getDLMMPool(poolAddress)
+// export async function claimAllSwapFees(
+//   poolAddress: string,
+//   userPublicKey: PublicKey,
+//   positions: Array<{ publicKey: string }>
+// ): Promise<Transaction[]> {
+//   const dlmmPool = await getDLMMPool(poolAddress)
 
-  const transactions = await dlmmPool.claimAllSwapFee({
-    owner: userPublicKey,
-    positions,
-  })
+//   const transactions = await dlmmPool.claimAllSwapFee({
+//     owner: userPublicKey,
+//     positions,
+//   })
 
-  return Array.isArray(transactions) ? transactions : [transactions]
-}
+//   return Array.isArray(transactions) ? transactions : [transactions]
+// }
 
 /**
  * Claim liquidity mining rewards for a single position
@@ -179,20 +195,20 @@ export async function claimAllSwapFees(
  * @param positionPublicKey - Position's public key
  * @returns Transaction
  */
-export async function claimLMReward(
-  poolAddress: string,
-  userPublicKey: PublicKey,
-  positionPublicKey: PublicKey
-): Promise<Transaction> {
-  const dlmmPool = await getDLMMPool(poolAddress)
+// export async function claimLMReward(
+//   poolAddress: string,
+//   userPublicKey: PublicKey,
+//   positionPublicKey: PublicKey
+// ): Promise<Transaction> {
+//   const dlmmPool = await getDLMMPool(poolAddress)
 
-  const transaction = await dlmmPool.claimLMReward({
-    owner: userPublicKey,
-    position: positionPublicKey,
-  })
+//   const transaction = await dlmmPool.claimLMReward({
+//     owner: userPublicKey,
+//     position: positionPublicKey,
+//   })
 
-  return transaction
-}
+//   return transaction
+// }
 
 /**
  * Claim all liquidity mining rewards for multiple positions
@@ -201,20 +217,20 @@ export async function claimLMReward(
  * @param positions - Array of position objects with publicKey
  * @returns Array of transactions
  */
-export async function claimAllLMRewards(
-  poolAddress: string,
-  userPublicKey: PublicKey,
-  positions: Array<{ publicKey: string }>
-): Promise<Transaction[]> {
-  const dlmmPool = await getDLMMPool(poolAddress)
+// export async function claimAllLMRewards(
+//   poolAddress: string,
+//   userPublicKey: PublicKey,
+//   positions: Array<{ publicKey: string }>
+// ): Promise<Transaction[]> {
+//   const dlmmPool = await getDLMMPool(poolAddress)
 
-  const transactions = await dlmmPool.claimAllLMRewards({
-    owner: userPublicKey,
-    positions,
-  })
+//   const transactions = await dlmmPool.claimAllLMRewards({
+//     owner: userPublicKey,
+//     positions,
+//   })
 
-  return Array.isArray(transactions) ? transactions : [transactions]
-}
+//   return Array.isArray(transactions) ? transactions : [transactions]
+// }
 
 /**
  * Claim all rewards (swap fees + LM rewards) for multiple positions
@@ -223,17 +239,17 @@ export async function claimAllLMRewards(
  * @param positions - Array of position objects with publicKey
  * @returns Array of transactions
  */
-export async function claimAllRewards(
-  poolAddress: string,
-  userPublicKey: PublicKey,
-  positions: Array<{ publicKey: string }>
-): Promise<Transaction[]> {
-  const dlmmPool = await getDLMMPool(poolAddress)
+// export async function claimAllRewards(
+//   poolAddress: string,
+//   userPublicKey: PublicKey,
+//   positions: Array<{ publicKey: string }>
+// ): Promise<Transaction[]> {
+//   const dlmmPool = await getDLMMPool(poolAddress)
 
-  const transactions = await dlmmPool.claimAllRewards({
-    owner: userPublicKey,
-    positions,
-  })
+//   const transactions = await dlmmPool.claimAllRewards({
+//     owner: userPublicKey,
+//     positions,
+//   })
 
-  return Array.isArray(transactions) ? transactions : [transactions]
-}
+//   return Array.isArray(transactions) ? transactions : [transactions]
+// }

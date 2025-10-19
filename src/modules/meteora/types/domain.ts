@@ -95,10 +95,11 @@ export interface MeteoraPoolsResponse {
 export type MeteoraView = 'discover' | 'manage' | 'profile'
 
 // Strategy types for liquidity distribution
+// Must match @meteora-ag/dlmm SDK enum values
 export enum StrategyType {
-  Spot = 'Spot',
-  Curve = 'Curve',
-  BidAsk = 'BidAsk',
+  Spot = 0,
+  Curve = 1,
+  BidAsk = 2,
 }
 
 // Active bin information
