@@ -24,6 +24,7 @@ import { useDriftMarketsStore } from '@/modules/drift/state';
 import { Button } from './ui/button';
 import type { CandleResolution } from '@drift-labs/sdk';
 import { DriftCandlestickChart } from '@/modules/drift/components/DriftCandlestickChart';
+import MeteoraStats from '@/modules/meteora/components/MeteoraStats';
 
 interface Pool {
     pair: string;
@@ -79,6 +80,7 @@ const Stats: React.FC<StatsProps> = ({ selectedPool, currentPool, chartData, cla
     const sarosState = useSarosDataStore((state) => state.data);
     const isSaros = selectedDapp === 'saros';
     const isDrift = selectedDapp === 'drift';
+    const isMeteora = selectedDapp === 'meteora';
 
     const activeSarosPool = sarosState.selectedPool ?? null;
     const sarosPoolAddress = isSaros && activeSarosPool ? activeSarosPool.pairs[0]?.pair : undefined;
@@ -107,6 +109,8 @@ const Stats: React.FC<StatsProps> = ({ selectedPool, currentPool, chartData, cla
         { label: '1h', value: '60' },
         { label: '1D', value: 'D' },
     ];
+
+
 
     const baseAmount = sarosSnapshot?.baseReserve ?? null;
     const quoteAmount = sarosSnapshot?.quoteReserve ?? null;
@@ -239,7 +243,7 @@ const Stats: React.FC<StatsProps> = ({ selectedPool, currentPool, chartData, cla
         ? driftChartSubtitle
         : shouldUseOverviewChart
             ? 'Saros Liquidity Chart'
-            : `${displaySelectedPool} Liquidity by Bin`;
+            : `${displaySelectedPool}`;
 
     const activeBinId = primaryPair?.activeBin ?? null;
 
@@ -467,6 +471,15 @@ const Stats: React.FC<StatsProps> = ({ selectedPool, currentPool, chartData, cla
         });
     }, [isSaros, shouldUseOverviewChart, displayChartData, sarosDisplayPool, fallbackPoolLabel, binDistribution]);
 
+    // Meteora has its own complete stats component
+    if (isMeteora) {
+        return (
+            <Card className={`col-start-1 col-span-7 w-full ${className || ''}`}>
+                <MeteoraStats />
+            </Card>
+        );
+    }
+
     return (
         <Card className={`col-start-1 col-span-7 w-full ${className || ''}`}>
             <div className="flex flex-col">
@@ -487,7 +500,9 @@ const Stats: React.FC<StatsProps> = ({ selectedPool, currentPool, chartData, cla
 
                 <div className="flex items-center justify-between mb-6">
                     <div>
-                        <h2 className="text-xl font-bold text-primary mb-1">{chartTitle}</h2>
+                        {chartTitle &&
+                            <h2 className="text-xl font-bold text-primary mb-1">{chartTitle}</h2>
+                        }
                         <p className="text-sm">{chartSubtitle}</p>
                         {isDrift && (
                             <div className="flex gap-1 mt-2">

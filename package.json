@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@drift-labs/sdk": "^2.142.0-beta.13",
+    "@meteora-ag/dlmm": "^1.7.5",
     "@radix-ui/react-dropdown-menu": "^2.1.16",
     "@radix-ui/react-select": "^2.2.6",
     "@radix-ui/react-slot": "^1.2.3",

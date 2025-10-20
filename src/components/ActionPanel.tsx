@@ -8,8 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/u
 import DappSelector, { type DappOption } from './DappSelector';
 import SarosAction from '@/modules/saros/components/SarosAction';
 import DriftAction from '@/modules/drift/components/DriftAction';
+import MeteoraAction from '@/modules/meteora/components/MeteoraAction';
 import { useDappStore, type SupportedDapp } from '@/store/dappStore';
 import { useSarosDataStore } from '@/modules/saros/state';
+import { useMeteoraDataStore } from '@/modules/meteora/state';
 import { WalletButton } from './WalletButton';
 
 interface Pool {
@@ -80,11 +82,12 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
     const selectedDapp = useDappStore((state) => state.selectedDapp);
     const setSelectedDapp = useDappStore((state) => state.setSelectedDapp);
     const triggerSarosFetch = useSarosDataStore((state) => state.fetchPools);
+    const triggerMeteoraFetch = useMeteoraDataStore((state) => state.fetchPairGroupsData);
 
     const dapps: DappOption[] = [
-        { id: 'saros', name: 'Saros', iconSrc: '/saros/SAROS_Mark_Purple.png' },
         { id: 'meteora', name: 'Meteora', iconSrc: '/meteora/meteora.png' },
         { id: 'drift', name: 'Drift', iconSrc: '/drift/drift-logo.svg' },
+        { id: 'saros', name: 'Saros', iconSrc: '/saros/SAROS_Mark_Purple.png' },
     ];
 
     const currentPool = pools.find(p => p.pair === selectedPool) || pools[0];
@@ -96,8 +99,10 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
     useEffect(() => {
         if (selectedDapp === 'saros') {
             void triggerSarosFetch({ force: true });
+        } else if (selectedDapp === 'meteora') {
+            void triggerMeteoraFetch({ force: true });
         }
-    }, [selectedDapp, triggerSarosFetch]);
+    }, [selectedDapp, triggerSarosFetch, triggerMeteoraFetch]);
     return (
         <div className="col-span-12 md:col-start-8 md:col-span-5 w-full h-full md:min-h-[600px]">
             <Card className="flex flex-col h-full rounded-none md:rounded-lg overflow-hidden md:overflow-visible">
@@ -124,6 +129,8 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
                     <TabsContent value="manage" className="flex-1 px-1">
                         {selectedDapp === 'saros' ? (
                             <SarosAction />
+                        ) : selectedDapp === 'meteora' ? (
+                            <MeteoraAction />
                         ) : selectedDapp === 'drift' ? (
                             <DriftAction />
                         ) : (

@@ -8,6 +8,6 @@ interface DappStoreState {
 }
 
 export const useDappStore = create<DappStoreState>((set) => ({
-  selectedDapp: 'saros',
+  selectedDapp: 'meteora',
   setSelectedDapp: (dapp) => set({ selectedDapp: dapp }),
 }))
