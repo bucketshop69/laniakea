@@ -34,22 +34,9 @@ export async function createPositionAndAddLiquidity(
   params: AddLiquidityParams
 ): Promise<{ transaction: Transaction; positionKeypair: Keypair }> {
   const dlmmPool = await getDLMMPool(params.poolAddress)
-  console.log(dlmmPool.pubkey.toString());
 
   // Generate new position keypair
   const positionKeypair = Keypair.generate()
-  console.log("[Create position]", {
-    positionPubKey: positionKeypair.publicKey,
-    user: params.userPublicKey,
-    totalXAmount: params.totalXAmount,
-    totalYAmount: params.totalYAmount,
-    strategy: {
-      minBinId: params.minBinId,
-      maxBinId: params.maxBinId,
-      strategyType: params.strategyType,
-    },
-    slippage: params.slippage ?? 3, // Default 1% slippage if not provided
-  });
 
   // Create transaction
   const transaction = await dlmmPool.initializePositionAndAddLiquidityByStrategy({
@@ -108,16 +95,9 @@ export async function removeLiquidityAndClose(
 ): Promise<Transaction | Transaction[]> {
   const dlmmPool = await getDLMMPool(params.poolAddress)
 
-  console.log('[Remove Liquidity]', {
-    position: params.positionPublicKey.toString(),
-    user: params.userPublicKey.toString(),
-    binIdsToRemove: params.binIdsToRemove,
-    shouldClaimAndClose: params.shouldClaimAndClose,
-  })
-
   // Remove 100% of liquidity from all bins
   const bps = new BN(100 * 100) // 100% removal in basis points
-  
+
   // Sort bin IDs to get min and max
   const sortedBins = [...params.binIdsToRemove].sort((a, b) => a - b)
   const fromBinId = sortedBins[0]
@@ -169,11 +149,6 @@ export async function executeRemoveLiquidity({
     throw new Error('No bins found in position')
   }
 
-  console.log('[Execute Remove Liquidity]', {
-    positionMint,
-    poolAddress,
-    binIds,
-  })
 
   // 3. Build remove liquidity transaction
   const txOrTxs = await removeLiquidityAndClose({
@@ -267,14 +242,9 @@ export async function executeClaimFees({
   connection: Connection
   signTransaction: (tx: Transaction | VersionedTransaction) => Promise<Transaction | VersionedTransaction>
 }): Promise<string> {
-  console.log('[Execute Claim Fees]', {
-    positionMint,
-    poolAddress,
-  })
-
   // Fetch DLMM pool to access claim method
   const dlmmPool = await getDLMMPool(poolAddress)
-  
+
   // Fetch position directly by public key (more efficient than fetching all positions)
   const position = await dlmmPool.getPosition(new PublicKey(positionMint))
 

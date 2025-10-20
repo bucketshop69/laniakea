@@ -33,22 +33,12 @@ export async function fetchMeteoraBinDistribution(
 
   const dlmmPool = await getDLMMPool(poolAddress)
 
-  console.log('[Meteora Bins] Fetching bin distribution', {
-    poolAddress,
-    activeBin,
-    range,
-  })
-
   try {
-    console.log("Rang per side", range);
 
     // Use the range parameter passed from the hook (default 33)
     const result = await dlmmPool.getBinsAroundActiveBin(range, range)
 
-    console.log('[Meteora Bins] ========== RAW SDK RESPONSE ==========')
-    console.log('[Meteora Bins] Full result object:', result)
-    console.log('[Meteora Bins] Active bin:', result.activeBin)
-    console.log('[Meteora Bins] Total bins fetched:', result.bins.length)
+
 
 
     // Transform SDK bins to our format
@@ -73,11 +63,6 @@ export async function fetchMeteoraBinDistribution(
         reserveX,
         reserveY,
         liquidity: liquidityValue,
-      }
-
-      // Log first few bins to verify processing
-      if (index < 3) {
-        console.log(`\n[Meteora Bins] PROCESSED BIN ${index}:`, processedBin)
       }
 
       return processedBin

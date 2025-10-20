@@ -9,9 +9,9 @@ import { useWalletBalanceStore, type WalletTokenBalance } from '@/store/walletBa
 import { useMeteoraStore, useMeteoraDataStore, type MeteoraManageTab } from '../state'
 import { useMeteoraBinDistribution } from '../hooks/useFetchBinDistribution'
 import { getActiveBin, getBinIdFromPrice, getUserPositions } from '../services/positions'
-import { 
-  createPositionAndAddLiquidity, 
-  addLiquidityToPosition, 
+import {
+  createPositionAndAddLiquidity,
+  addLiquidityToPosition,
   executeRemoveLiquidity,
   handleRemoveLiquidityError
 } from '../services/liquidity'
@@ -20,6 +20,7 @@ import ManageHeader from './manage/ManageHeader'
 import AddLiquidityForm from './manage/AddLiquidityForm'
 import RemoveLiquidityPanel, { type MeteoraDisplayPosition } from './manage/RemoveLiquidityPanel'
 import { sendViaSanctum } from '@/lib/sanctumGateway'
+import { transformPositionsToDisplayFormat } from '../utils/positionTransform'
 
 interface MeteoraManageProps {
   onBack: () => void
@@ -165,11 +166,6 @@ const MeteoraManage = ({ onBack }: MeteoraManageProps) => {
       .then((activeBin) => {
         if (!cancelled) {
           setInitialActiveBinId(activeBin.binId)
-          console.log('[Meteora Manage] Initial active bin fetched', {
-            binId: activeBin.binId,
-            price: activeBin.price,
-            pricePerToken: activeBin.pricePerToken,
-          })
         }
       })
       .catch((error) => {
@@ -202,26 +198,15 @@ const MeteoraManage = ({ onBack }: MeteoraManageProps) => {
   // Fetch balances when wallet connects or pool changes
   useEffect(() => {
     if (!connected || !publicKey || !pool) {
-      console.log('[Meteora Manage] Skipping balance fetch - wallet not connected or no pool selected', {
-        connected,
-        publicKey: publicKey?.toString(),
-        poolAddress: pool?.address,
-      })
       return
     }
 
     const mintAddresses = [baseMint, quoteMint].filter((mint): mint is string => Boolean(mint))
     if (mintAddresses.length === 0) {
-      console.log('[Meteora Manage] No mint addresses to fetch')
       return
     }
 
-    console.log('[Meteora Manage] Fetching balances for mints', {
-      baseMint,
-      quoteMint,
-      poolAddress: pool.address,
-      walletAddress: publicKey.toString(),
-    })
+
 
     void refreshBalances(connection, publicKey, mintAddresses, { force: true })
   }, [connected, publicKey, pool, baseMint, quoteMint, connection, refreshBalances])
@@ -237,50 +222,13 @@ const MeteoraManage = ({ onBack }: MeteoraManageProps) => {
 
     getUserPositions(publicKey.toString(), poolAddress)
       .then((userPositions) => {
-        console.log('[Meteora Manage] User positions fetched', {
-          count: userPositions.length,
-          positions: userPositions,
-        })
-
-        // Convert to display format
-        const displayPositions: MeteoraDisplayPosition[] = userPositions.map((pos) => {
-          const baseDecimals = baseTokenBalance?.decimals ?? 9
-          const quoteDecimals = quoteTokenBalance?.decimals ?? 9
-
-          const baseAmount = parseFloat(pos.positionData.totalXAmount) / Math.pow(10, baseDecimals)
-          const quoteAmount = parseFloat(pos.positionData.totalYAmount) / Math.pow(10, quoteDecimals)
-
-          // Estimate total value in quote token
-          const totalValue = pool?.current_price
-            ? baseAmount * pool.current_price + quoteAmount
-            : null
-
-          // Get bin IDs and prices for the position
-          const lowerBinId = pos.positionAccount.lowerBinId
-          const upperBinId = pos.positionAccount.upperBinId
-          const totalBins = pos.positionData.positionBinData.length
-
-          // Find min and max prices from bin data
-          const minPrice = pos.positionData.positionBinData.length > 0
-            ? Math.min(...pos.positionData.positionBinData.map(bin => bin.pricePerToken))
-            : null
-          const maxPrice = pos.positionData.positionBinData.length > 0
-            ? Math.max(...pos.positionData.positionBinData.map(bin => bin.pricePerToken))
-            : null
-
-          return {
-            positionMint: pos.publicKey,
-            position: pos.publicKey,
-            lowerBinId,
-            upperBinId,
-            minPrice,
-            maxPrice,
-            totalBins,
-            baseAmount,
-            quoteAmount,
-            totalValue,
-          }
-        })
+        // Convert to display format using utility function
+        const displayPositions = transformPositionsToDisplayFormat(
+          userPositions,
+          pool,
+          baseTokenBalance?.decimals ?? 9,
+          quoteTokenBalance?.decimals ?? 9
+        )
 
         setPositions(displayPositions)
         setPositionsLoading(false)
@@ -367,37 +315,6 @@ const MeteoraManage = ({ onBack }: MeteoraManageProps) => {
   const baseBalanceLabel = renderBalanceLabel(baseTokenBalance, baseSymbol)
   const quoteBalanceLabel = renderBalanceLabel(quoteTokenBalance, quoteSymbol)
 
-  // Log balance state for debugging
-  useEffect(() => {
-    console.log('[Meteora Manage] Balance state updated', {
-      baseMint,
-      quoteMint,
-      nativeBalanceSol,
-      isBaseNativeSOL: baseMint === NATIVE_SOL_MINT,
-      isQuoteNativeSOL: quoteMint === NATIVE_SOL_MINT,
-      baseTokenBalance: baseTokenBalance ? {
-        mint: baseTokenBalance.mint,
-        uiAmount: baseTokenBalance.uiAmount,
-        uiAmountString: baseTokenBalance.uiAmountString,
-        decimals: baseTokenBalance.decimals,
-        isNative: baseTokenBalance.isNative,
-      } : null,
-      quoteTokenBalance: quoteTokenBalance ? {
-        mint: quoteTokenBalance.mint,
-        uiAmount: quoteTokenBalance.uiAmount,
-        uiAmountString: quoteTokenBalance.uiAmountString,
-        decimals: quoteTokenBalance.decimals,
-        isNative: quoteTokenBalance.isNative,
-      } : null,
-      isBalanceLoading,
-      balancesError,
-      baseBalanceLabel,
-      quoteBalanceLabel,
-      allBalancesInStore: Object.keys(balancesByMint).length,
-      allMints: Object.keys(balancesByMint),
-    })
-  }, [baseMint, quoteMint, nativeBalanceSol, baseTokenBalance, quoteTokenBalance, isBalanceLoading, balancesError, baseBalanceLabel, quoteBalanceLabel, balancesByMint])
-
   // Get min/max bin IDs from form state
   const minBinId = manageForm?.minBinId ?? null
   const maxBinId = manageForm?.maxBinId ?? null
@@ -472,11 +389,6 @@ const MeteoraManage = ({ onBack }: MeteoraManageProps) => {
   // Handle range change from bin chart
   const handleRangeChange = (newMinBinId: number, newMaxBinId: number) => {
     updateForm({ minBinId: newMinBinId, maxBinId: newMaxBinId })
-    console.log('[Meteora Manage] Bin range changed', {
-      minBinId: newMinBinId,
-      maxBinId: newMaxBinId,
-      numBins: newMaxBinId - newMinBinId + 1,
-    })
   }
 
   const formatTokenAmount = useCallback((amount: number) => {
@@ -637,17 +549,9 @@ const MeteoraManage = ({ onBack }: MeteoraManageProps) => {
     try {
       const binId = await getBinIdFromPrice(poolAddress, parsedPrice, true)
 
-      console.log('[Meteora] 🔵 Min price input → binId', {
-        userInput: parsedPrice,
-        foundBinId: binId,
-        oldMinBinId: minBinId,
-        maxBinId,
-      })
-
       updateForm({ minBinId: binId })
       setErrorMessage(null)
 
-      console.log('[Meteora] ✅ Reactive chain triggered - chart, brush, bins will update')
     } catch (error) {
       console.error('[Meteora Manage] Failed to convert min price to bin ID', error)
       setErrorMessage('Failed to update min price')
@@ -706,17 +610,9 @@ const MeteoraManage = ({ onBack }: MeteoraManageProps) => {
     try {
       const binId = await getBinIdFromPrice(poolAddress, parsedPrice, false)
 
-      console.log('[Meteora] 🔵 Max price input → binId', {
-        userInput: parsedPrice,
-        foundBinId: binId,
-        minBinId,
-        oldMaxBinId: maxBinId,
-      })
 
       updateForm({ maxBinId: binId })
       setErrorMessage(null)
-
-      console.log('[Meteora] ✅ Reactive chain triggered - chart, brush, bins will update')
     } catch (error) {
       console.error('[Meteora Manage] Failed to convert max price to bin ID', error)
       setErrorMessage('Failed to update max price')
@@ -737,41 +633,12 @@ const MeteoraManage = ({ onBack }: MeteoraManageProps) => {
       // If on remove tab, also refresh positions
       if (tab === 'remove' && poolAddress) {
         const updatedPositions = await getUserPositions(publicKey.toString(), poolAddress)
-        const displayPositions: MeteoraDisplayPosition[] = updatedPositions.map((pos) => {
-          const baseDecimals = baseTokenBalance?.decimals ?? 9
-          const quoteDecimals = quoteTokenBalance?.decimals ?? 9
-
-          const baseAmount = parseFloat(pos.positionData.totalXAmount) / Math.pow(10, baseDecimals)
-          const quoteAmount = parseFloat(pos.positionData.totalYAmount) / Math.pow(10, quoteDecimals)
-
-          const totalValue = pool?.current_price
-            ? baseAmount * pool.current_price + quoteAmount
-            : null
-
-          const lowerBinId = pos.positionAccount.lowerBinId
-          const upperBinId = pos.positionAccount.upperBinId
-          const totalBins = pos.positionData.positionBinData.length
-
-          const minPrice = pos.positionData.positionBinData.length > 0
-            ? Math.min(...pos.positionData.positionBinData.map(bin => bin.pricePerToken))
-            : null
-          const maxPrice = pos.positionData.positionBinData.length > 0
-            ? Math.max(...pos.positionData.positionBinData.map(bin => bin.pricePerToken))
-            : null
-
-          return {
-            positionMint: pos.publicKey,
-            position: pos.publicKey,
-            lowerBinId,
-            upperBinId,
-            minPrice,
-            maxPrice,
-            totalBins,
-            baseAmount,
-            quoteAmount,
-            totalValue,
-          }
-        })
+        const displayPositions = transformPositionsToDisplayFormat(
+          updatedPositions,
+          pool,
+          baseTokenBalance?.decimals ?? 9,
+          quoteTokenBalance?.decimals ?? 9
+        )
 
         setPositions(displayPositions)
       }
@@ -831,23 +698,6 @@ const MeteoraManage = ({ onBack }: MeteoraManageProps) => {
     setIsAdding(true)
 
     try {
-      const isOneSided = baseAmount === 0 || quoteAmount === 0
-      const binRange = maxBinId - minBinId
-      console.log('[Meteora Manage] Adding liquidity', {
-        poolAddress,
-        baseAmount,
-        quoteAmount,
-        baseAmountLamports: baseAmountLamports.toString(),
-        quoteAmountLamports: quoteAmountLamports.toString(),
-        minBinId,
-        maxBinId,
-        binRange,
-        strategyType,
-        isOneSided,
-        oneSidedToken: baseAmount === 0 ? quoteSymbol : (quoteAmount === 0 ? baseSymbol : 'both'),
-        activeBinId,
-      })
-
       // Check if user has existing positions in this bin range
       const userPositions = await getUserPositions(publicKey.toString(), poolAddress)
 
@@ -860,7 +710,6 @@ const MeteoraManage = ({ onBack }: MeteoraManageProps) => {
       let positionKeypair
 
       if (existingPosition) {
-        console.log('[Meteora Manage] Adding to existing position', existingPosition.publicKey)
         transaction = await addLiquidityToPosition({
           poolAddress,
           userPublicKey: publicKey,
@@ -872,7 +721,6 @@ const MeteoraManage = ({ onBack }: MeteoraManageProps) => {
           existingPositionPubKey: new PublicKey(existingPosition.publicKey),
         })
       } else {
-        console.log('[Meteora Manage] Creating new position')
         const result = await createPositionAndAddLiquidity({
           poolAddress,
           userPublicKey: publicKey,
@@ -890,7 +738,6 @@ const MeteoraManage = ({ onBack }: MeteoraManageProps) => {
       // This ensures the signature survives Sanctum's transaction rebuild
       if (positionKeypair) {
         transaction.partialSign(positionKeypair)
-        console.log('[Meteora Manage] Transaction pre-signed with position keypair')
       }
 
       // Send via Sanctum (builder will handle blockhash/fees/tips and preserve signatures)
@@ -901,7 +748,6 @@ const MeteoraManage = ({ onBack }: MeteoraManageProps) => {
         { signTransaction },
         { waitForCommitment: 'confirmed' }
       )
-      console.log('[Meteora Manage] Transaction sent via Sanctum', { signature })
 
       setSuccessMessage(`Liquidity added! Tx: ${signature}`)
 
@@ -957,11 +803,6 @@ const MeteoraManage = ({ onBack }: MeteoraManageProps) => {
     setRemovingMint(position.positionMint)
 
     try {
-      console.log('[Meteora Manage] Removing liquidity', {
-        positionMint: position.positionMint,
-        poolAddress,
-      })
-
       // Execute remove liquidity via service layer
       const signature = await executeRemoveLiquidity({
         poolAddress,
@@ -982,42 +823,12 @@ const MeteoraManage = ({ onBack }: MeteoraManageProps) => {
 
       // Refresh positions list for this pool
       const updatedPositions = await getUserPositions(publicKey.toString(), poolAddress)
-      const displayPositions: MeteoraDisplayPosition[] = updatedPositions.map((pos) => {
-        const baseDecimals = baseTokenBalance?.decimals ?? 9
-        const quoteDecimals = quoteTokenBalance?.decimals ?? 9
-
-        const baseAmount = parseFloat(pos.positionData.totalXAmount) / Math.pow(10, baseDecimals)
-        const quoteAmount = parseFloat(pos.positionData.totalYAmount) / Math.pow(10, quoteDecimals)
-
-        const totalValue = pool?.current_price
-          ? baseAmount * pool.current_price + quoteAmount
-          : null
-
-        const lowerBinId = pos.positionAccount.lowerBinId
-        const upperBinId = pos.positionAccount.upperBinId
-        const totalBins = pos.positionData.positionBinData.length
-
-        // Find min and max prices from bin data
-        const minPrice = pos.positionData.positionBinData.length > 0
-          ? Math.min(...pos.positionData.positionBinData.map(bin => bin.pricePerToken))
-          : null
-        const maxPrice = pos.positionData.positionBinData.length > 0
-          ? Math.max(...pos.positionData.positionBinData.map(bin => bin.pricePerToken))
-          : null
-
-        return {
-          positionMint: pos.publicKey,
-          position: pos.publicKey,
-          lowerBinId,
-          upperBinId,
-          minPrice,
-          maxPrice,
-          totalBins,
-          baseAmount,
-          quoteAmount,
-          totalValue,
-        }
-      })
+      const displayPositions = transformPositionsToDisplayFormat(
+        updatedPositions,
+        pool,
+        baseTokenBalance?.decimals ?? 9,
+        quoteTokenBalance?.decimals ?? 9
+      )
 
       setPositions(displayPositions)
 
