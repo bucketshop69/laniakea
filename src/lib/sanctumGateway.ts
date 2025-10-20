@@ -39,8 +39,8 @@ function getGatewayUrl() {
   
   const c = cluster === 'devnet' ? 'v1/devnet' : 'v1/mainnet'
   
-  // TODO: Consider using Authorization header instead of query param for better security
-  // For now, keeping query param for compatibility with Sanctum API
+  // Note: Sanctum Gateway uses query param for API key (their API design)
+  // This is acceptable as it's over HTTPS, but Authorization header would be better
   return `https://tpg.sanctum.so/${c}?apiKey=${apiKey}`
 }
 
@@ -69,6 +69,16 @@ export async function buildGatewayTransaction(
     )
   }
 
+  // Validate transaction before sending
+  if (!unsignedTx) {
+    throw new Error('Invalid transaction: transaction is required')
+  }
+
+  // Validate options if provided
+  if (options && typeof options !== 'object') {
+    throw new Error('Invalid options: must be an object')
+  }
+
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -81,13 +91,21 @@ export async function buildGatewayTransaction(
   })
   
   if (!res.ok) {
-    throw new Error(`Sanctum Gateway buildGatewayTransaction failed: ${res.status} ${res.statusText}`)
+    // Sanitize error messages in production - don't leak internal details
+    const errorMsg = import.meta.env.PROD
+      ? `Sanctum Gateway request failed: ${res.status}`
+      : `Sanctum Gateway buildGatewayTransaction failed: ${res.status} ${res.statusText}`
+    throw new Error(errorMsg)
   }
   
   const body = await res.json()
   
   if (body?.error) {
-    throw new Error(`Sanctum Gateway error: ${body.error.message || JSON.stringify(body.error)}`)
+    // Sanitize error messages in production
+    const errorMsg = import.meta.env.PROD
+      ? 'Sanctum Gateway error occurred'
+      : `Sanctum Gateway error: ${body.error.message || JSON.stringify(body.error)}`
+    throw new Error(errorMsg)
   }
   
   const encoded: string = body?.result?.transaction || body?.result?.[0]?.transaction
@@ -142,13 +160,21 @@ export async function sendViaSanctum(
   })
   
   if (!res.ok) {
-    throw new Error(`Sanctum Gateway sendTransaction failed: ${res.status} ${res.statusText}`)
+    // Sanitize error messages in production
+    const errorMsg = import.meta.env.PROD
+      ? `Sanctum Gateway send failed: ${res.status}`
+      : `Sanctum Gateway sendTransaction failed: ${res.status} ${res.statusText}`
+    throw new Error(errorMsg)
   }
   
   const body = await res.json()
   
   if (body?.error) {
-    throw new Error(`Sanctum Gateway error: ${body.error.message || JSON.stringify(body.error)}`)
+    // Sanitize error messages in production
+    const errorMsg = import.meta.env.PROD
+      ? 'Sanctum Gateway send error'
+      : `Sanctum Gateway error: ${body.error.message || JSON.stringify(body.error)}`
+    throw new Error(errorMsg)
   }
   
   const result = body?.result
@@ -162,8 +188,11 @@ export async function sendViaSanctum(
     try {
       const latest = await connection.getLatestBlockhash()
       await connection.confirmTransaction({ signature, ...latest }, opts.waitForCommitment)
-    } catch {
-      // ignore confirmation failure here
+    } catch (confirmError) {
+      // Log confirmation errors - don't silently swallow them
+      console.warn('[Sanctum Gateway] Transaction confirmation warning:', confirmError)
+      // Transaction was sent successfully, just confirmation timed out
+      // Return signature anyway - user can check status manually
     }
   }
 
