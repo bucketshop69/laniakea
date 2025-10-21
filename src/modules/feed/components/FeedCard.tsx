@@ -1,12 +1,13 @@
-import React from 'react'
-import { ExternalLink, PinIcon } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import React, { useState } from 'react'
+import { ExternalLink, Pin, Loader2 } from 'lucide-react'
 import type { FeedItem } from '../types/feedTypes'
 
 interface FeedCardProps {
   item: FeedItem
   onSaveToChart?: (item: FeedItem) => void
-  showTimeline?: boolean // Not used currently but kept for future expansion
+  onRemoveFromChart?: (item: FeedItem) => void
+  isSaving?: boolean
+  isSaved?: boolean // Pass from parent instead of reading from store
 }
 
 /**
@@ -47,9 +48,19 @@ const formatTimestamp = (timestamp: string): string => {
   })
 }
 
-export const FeedCard: React.FC<FeedCardProps> = ({ item, onSaveToChart }) => {
+export const FeedCard: React.FC<FeedCardProps> = ({ item, onSaveToChart, onRemoveFromChart, isSaving = false, isSaved = false }) => {
+  const [isHovered, setIsHovered] = useState(false)
+
+  const handlePinClick = () => {
+    if (isSaved && onRemoveFromChart) {
+      onRemoveFromChart(item)
+    } else if (!isSaved && onSaveToChart) {
+      onSaveToChart(item)
+    }
+  }
+
   return (
-    <div className="relative">
+    <div className="relative animate-in fade-in slide-in-from-bottom-2 duration-300">
       <div className="flex">
         {/* Card content */}
         <div className="flex-1 bg-card/50 border border-muted/30 rounded-lg p-3 hover:border-primary/30 transition-all duration-200">
@@ -107,17 +118,41 @@ export const FeedCard: React.FC<FeedCardProps> = ({ item, onSaveToChart }) => {
                 </a>
               )}
 
-              {/* Save to Chart button - only show if asset exists */}
-              {item.asset_related_to && onSaveToChart && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => onSaveToChart(item)}
-                  className="h-6 px-2 text-xs hover:bg-primary/10 hover:text-primary"
-                >
-                  <PinIcon size={12} className="mr-1" />
-                  Save to Chart
-                </Button>
+              {/* Pin Icon - only show if asset exists */}
+              {item.asset_related_to && (onSaveToChart || onRemoveFromChart) && (
+                <div className="relative">
+                  <button
+                    onClick={handlePinClick}
+                    disabled={isSaving}
+                    onMouseEnter={() => setIsHovered(true)}
+                    onMouseLeave={() => setIsHovered(false)}
+                    className={`
+                      relative p-1 rounded transition-all duration-200
+                      ${isSaved 
+                        ? 'bg-muted text-primary hover:bg-muted/80' 
+                        : 'bg-muted/30 text-muted-foreground hover:bg-muted/50 hover:text-primary'
+                      }
+                      ${isSaving ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+                    `}
+                  >
+                    {isSaving ? (
+                      <Loader2 size={12} className="animate-spin" />
+                    ) : (
+                      <Pin 
+                        size={12} 
+                        className={isSaved ? 'fill-current' : ''} 
+                      />
+                    )}
+                  </button>
+
+                  {/* Tooltip on hover */}
+                  {isHovered && !isSaving && (
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-0.5 bg-slate-900 border border-slate-700 rounded text-[10px] text-white whitespace-nowrap z-10">
+                      {isSaved ? 'Remove from Chart' : 'Save to Chart'}
+                      <div className="absolute left-1/2 top-full -translate-x-1/2 w-0 h-0 border-l-3 border-r-3 border-t-3 border-l-transparent border-r-transparent border-t-slate-900" />
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           </div>

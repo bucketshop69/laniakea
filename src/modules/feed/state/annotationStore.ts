@@ -41,10 +41,12 @@ export const useAnnotationStore = create<AnnotationStoreState>((set, get) => ({
 
   // Load annotations for a specific wallet and asset
   loadAnnotations: async (walletAddress: string, asset: string) => {
+    console.log('[AnnotationStore] loadAnnotations called:', { walletAddress, asset })
     set({ isLoading: true, error: null })
 
     try {
       const annotations = await annotationService.getUserAnnotations(walletAddress, asset)
+      console.log('[AnnotationStore] Loaded annotations:', annotations.length, annotations)
 
       set({
         annotations,
@@ -53,7 +55,7 @@ export const useAnnotationStore = create<AnnotationStoreState>((set, get) => ({
         isLoading: false,
       })
     } catch (error) {
-      console.error('Error loading annotations:', error)
+      console.error('[AnnotationStore] Error loading annotations:', error)
       set({
         error: error instanceof Error ? error.message : 'Failed to load annotations',
         isLoading: false,
@@ -65,18 +67,16 @@ export const useAnnotationStore = create<AnnotationStoreState>((set, get) => ({
   addAnnotation: async (params: CreateAnnotationParams) => {
     const { currentWalletAddress, currentAsset, annotationLimit } = get()
 
-    // Validation checks
+    // Set wallet and asset if not already set
     if (!currentWalletAddress) {
-      set({ error: 'Wallet not connected' })
-      return null
-    }
-
-    if (params.walletAddress !== currentWalletAddress) {
-      set({ error: 'Wallet address mismatch' })
-      return null
+      set({
+        currentWalletAddress: params.walletAddress,
+        currentAsset: params.asset,
+      })
     }
 
     // Check annotation limit
+    console.log('[AnnotationStore] Checking annotation limit for:', params.asset)
     const canAdd = await annotationService.canAddAnnotation(
       params.walletAddress,
       params.asset,
@@ -84,14 +84,17 @@ export const useAnnotationStore = create<AnnotationStoreState>((set, get) => ({
     )
 
     if (!canAdd) {
+      console.error('[AnnotationStore] Annotation limit reached for', params.asset)
       set({ error: `You have reached the maximum of ${annotationLimit} annotations for this asset` })
       return null
     }
 
+    console.log('[AnnotationStore] Saving annotation:', params.note)
     set({ isLoading: true, error: null })
 
     try {
       const newAnnotation = await annotationService.saveAnnotation(params)
+      console.log('[AnnotationStore] Annotation saved successfully:', newAnnotation.id)
 
       // Add to store if it's for the current asset
       if (params.asset === currentAsset) {

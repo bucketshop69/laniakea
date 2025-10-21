@@ -259,10 +259,12 @@ export const annotationService = {
   async canAddAnnotation(walletAddress: string, asset: string, limit = 10): Promise<boolean> {
     try {
       const count = await this.getAnnotationCount(walletAddress, asset)
+      console.log(`[AnnotationService] Count for ${asset}: ${count}/${limit}`)
       return count < limit
     } catch (error) {
       console.error('Error checking annotation limit:', error)
-      return false
+      // On error, allow the save attempt (fail gracefully)
+      return true
     }
   },
 }
