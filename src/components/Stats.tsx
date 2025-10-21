@@ -536,6 +536,7 @@ const Stats: React.FC<StatsProps> = ({ selectedPool, currentPool, chartData, cla
                             key={selectedDriftMarket?.marketIndex ?? 'drift-chart'}
                             data={driftChartData}
                             isLoading={driftChartLoading}
+                            marketSymbol={selectedDriftMarket?.symbol}
                         />
                     ) : chartIsLoading ? (
                         <div className="flex h-[320px] items-center justify-center rounded-lg border border-dashed border-border/40 text-sm text-muted-foreground">

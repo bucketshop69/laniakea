@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { PlusCircle, MinusCircle, Settings, User, Rss, Calendar, TrendingUp, TrendingDown, ArrowRight } from 'lucide-react';
+import { PlusCircle, MinusCircle, Settings, User, Rss, ArrowRight } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ import { useDappStore, type SupportedDapp } from '@/store/dappStore';
 import { useSarosDataStore } from '@/modules/saros/state';
 import { useMeteoraDataStore } from '@/modules/meteora/state';
 import { WalletButton } from './WalletButton';
+import { FeedPanel } from '@/modules/feed/components';
 
 interface Pool {
     pair: string;
@@ -400,42 +401,8 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
                     </TabsContent>
 
                     {/* FEED TAB CONTENT */}
-                    <TabsContent value="feed" className="flex-1 space-y-4 px-4 opacity-50">
-                        <h3 className="text-muted-foreground font-medium mb-3 text-sm">Market Feed</h3>
-                        <div className="space-y-3 max-h-96 overflow-y-auto">
-                            {newsItems.map((item, index) => (
-                                <div key={item.id} className="relative">
-                                    {/* Timeline line */}
-                                    {index !== newsItems.length - 1 && (
-                                        <div className="absolute left-4 top-8 w-0.5 h-full bg-slate-700/50"></div>
-                                    )}
-
-                                    <div className={`flex ${index % 2 === 0 ? 'flex-row' : 'flex-row-reverse'}`}>
-                                        {/* Timeline dot */}
-                                        <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center bg-muted">
-                                            {item.type === 'event' ?
-                                                <Calendar size={12} className="text-muted-foreground" /> :
-                                                item.impact === 'bullish' ? <TrendingUp size={12} className="text-muted-foreground" /> :
-                                                    item.impact === 'bearish' ? <TrendingDown size={12} className="text-muted-foreground" /> :
-                                                        <Rss size={12} className="text-muted-foreground" />
-                                            }
-                                        </div>
-
-                                        {/* Content */}
-                                        <div className={`-dark p-1 flex-1 ${index % 2 === 0 ? 'ml-3' : 'mr-3'}`}>
-                                            <div className="flex justify-between items-start mb-1">
-                                                <h4 className="text-muted-foreground text-sm font-medium">{item.title}</h4>
-                                                <span className="text-muted-foreground text-xs">{item.time}</span>
-                                            </div>
-                                            <p className="text-muted-foreground text-xs mb-2">{item.description}</p>
-                                            {item.date && (
-                                                <p className="text-muted-foreground text-xs font-medium">{item.date}</p>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
+                    <TabsContent value="feed" className="flex-1 px-4">
+                        <FeedPanel />
                     </TabsContent>
                 </Tabs>
             </Card>
