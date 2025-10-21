@@ -13,6 +13,11 @@ export const annotationService = {
    */
   async saveAnnotation(params: CreateAnnotationParams): Promise<ChartAnnotation> {
     try {
+      // SECURITY: Validate wallet address format (basic check)
+      if (!params.walletAddress || params.walletAddress.length < 32) {
+        throw new Error('Invalid wallet address')
+      }
+
       const { data, error } = await supabase
         .from('chart_annotations')
         .insert({
@@ -49,6 +54,11 @@ export const annotationService = {
    */
   async createUserAnnotation(params: Omit<CreateAnnotationParams, 'feedItemId'>): Promise<ChartAnnotation> {
     try {
+      // SECURITY: Validate wallet address format (basic check)
+      if (!params.walletAddress || params.walletAddress.length < 32) {
+        throw new Error('Invalid wallet address')
+      }
+
       const { data, error } = await supabase
         .from('chart_annotations')
         .insert({

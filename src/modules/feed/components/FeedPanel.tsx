@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState, useMemo } from 'react'
 import { Clock, Loader2, AlertCircle } from 'lucide-react'
 import { useWallet } from '@solana/wallet-adapter-react'
 import { useFeedStore } from '../state/feedStore'
@@ -37,21 +37,17 @@ export const FeedPanel: React.FC = () => {
     if (publicKey) {
       const loadAllAnnotations = async () => {
         try {
-          const assets = ['BTC', 'SOL', 'ETH']
-          const allAnnotations = []
-
-          for (const asset of assets) {
-            const { annotationService } = await import('../services/annotationService')
-            const assetAnnotations = await annotationService.getUserAnnotations(
-              publicKey.toString(),
-              asset
-            )
-            allAnnotations.push(...assetAnnotations)
-          }
+          // Use getAllUserAnnotations() instead of N+1 queries
+          const { annotationService } = await import('../services/annotationService')
+          const allAnnotations = await annotationService.getAllUserAnnotations(
+            publicKey.toString()
+          )
 
           setAllUserAnnotations(allAnnotations)
         } catch (error) {
           console.error('[FeedPanel] Failed to load all annotations:', error)
+          // Continue with empty annotations rather than breaking the UI
+          setAllUserAnnotations([])
         }
       }
 
@@ -74,19 +70,23 @@ export const FeedPanel: React.FC = () => {
     }
   }, [feedItems.length])
 
-  // Split items into past and future based on current time
-  const now = new Date()
-  const pastItems = feedItems.filter((item) => new Date(item.timestamp) < now)
-  const futureItems = feedItems.filter((item) => new Date(item.timestamp) >= now)
+  // Split items into past and future based on current time (memoized for performance)
+  const { sortedPastItems, sortedFutureItems } = useMemo(() => {
+    const now = new Date()
+    const pastItems = feedItems.filter((item) => new Date(item.timestamp) < now)
+    const futureItems = feedItems.filter((item) => new Date(item.timestamp) >= now)
 
-  // Sort: past items closest to NOW first (descending), future items soonest first (ascending)
-  // This makes items near NOW marker appear closest to it
-  const sortedPastItems = [...pastItems].sort(
-    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-  )
-  const sortedFutureItems = [...futureItems].sort(
-    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-  )
+    // Sort: past items closest to NOW first (descending), future items soonest first (ascending)
+    // This makes items near NOW marker appear closest to it
+    const sortedPastItems = [...pastItems].sort(
+      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    )
+    const sortedFutureItems = [...futureItems].sort(
+      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    )
+
+    return { sortedPastItems, sortedFutureItems }
+  }, [feedItems])
 
   const handleSaveToChart = async (item: FeedItem) => {
     // Check wallet connection
@@ -94,6 +94,9 @@ export const FeedPanel: React.FC = () => {
       showToast('Please connect your wallet to save annotations', 'warning')
       return
     }
+
+    // SECURITY: Get the connected wallet address
+    const walletAddress = publicKey.toString()
 
     // Check if item has asset
     if (!item.asset_related_to) {
@@ -113,14 +116,14 @@ export const FeedPanel: React.FC = () => {
 
     try {
       console.log('[FeedPanel] Saving annotation:', {
-        wallet: publicKey.toString().slice(0, 8),
+        wallet: walletAddress.slice(0, 8),
         asset: item.asset_related_to,
         timestamp: item.timestamp,
         note: item.title,
       })
 
       const result = await addAnnotation({
-        walletAddress: publicKey.toString(),
+        walletAddress, // Use validated wallet address
         asset: item.asset_related_to,
         timestamp: item.timestamp,
         note: item.title,

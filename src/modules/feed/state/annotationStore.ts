@@ -67,6 +67,13 @@ export const useAnnotationStore = create<AnnotationStoreState>((set, get) => ({
   addAnnotation: async (params: CreateAnnotationParams) => {
     const { currentWalletAddress, currentAsset, annotationLimit } = get()
 
+    // SECURITY: Basic wallet address validation
+    if (!params.walletAddress || params.walletAddress.length < 32) {
+      console.error('[AnnotationStore] Invalid wallet address')
+      set({ error: 'Invalid wallet address' })
+      return null
+    }
+
     // Set wallet and asset if not already set
     if (!currentWalletAddress) {
       set({
