@@ -14,25 +14,15 @@ interface FeedCardProps {
  * Get category badge color
  */
 const getCategoryColor = (category: string): string => {
-  const lower = category.toLowerCase()
-  if (lower.includes('macro') || lower.includes('market')) return 'bg-blue-500/20 text-blue-400'
-  if (lower.includes('protocol')) return 'bg-purple-500/20 text-purple-400'
-  if (lower.includes('defi')) return 'bg-green-500/20 text-green-400'
-  if (lower.includes('derivatives')) return 'bg-orange-500/20 text-orange-400'
-  if (lower.includes('lending')) return 'bg-yellow-500/20 text-yellow-400'
-  if (lower.includes('ecosystem')) return 'bg-pink-500/20 text-pink-400'
-  return 'bg-gray-500/20 text-gray-400'
+  const base = 'border border-border/40 bg-secondary/40 text-secondary-foreground'
+  return base
 }
 
 /**
  * Get asset badge color
  */
 const getAssetColor = (asset: string): string => {
-  const upper = asset.toUpperCase()
-  if (upper === 'SOL') return 'bg-purple-500/30 text-purple-300 border border-purple-500/50'
-  if (upper === 'BTC') return 'bg-orange-500/30 text-orange-300 border border-orange-500/50'
-  if (upper === 'ETH') return 'bg-blue-500/30 text-blue-300 border border-blue-500/50'
-  return 'bg-gray-500/30 text-gray-300 border border-gray-500/50'
+  return 'border border-border/40 bg-card/50 text-secondary-foreground'
 }
 
 /**
@@ -111,7 +101,7 @@ export const FeedCard: React.FC<FeedCardProps> = ({ item, onSaveToChart, onRemov
                   href={item.link}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1"
+                  className="text-xs text-secondary-foreground hover:text-primary flex items-center gap-1"
                 >
                   <ExternalLink size={12} />
                   Read
@@ -147,9 +137,9 @@ export const FeedCard: React.FC<FeedCardProps> = ({ item, onSaveToChart, onRemov
 
                   {/* Tooltip on hover */}
                   {isHovered && !isSaving && (
-                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-0.5 bg-slate-900 border border-slate-700 rounded text-[10px] text-white whitespace-nowrap z-10">
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-0.5 rounded border border-border bg-card text-[10px] text-primary whitespace-nowrap z-10">
                       {isSaved ? 'Remove from Chart' : 'Save to Chart'}
-                      <div className="absolute left-1/2 top-full -translate-x-1/2 w-0 h-0 border-l-3 border-r-3 border-t-3 border-l-transparent border-r-transparent border-t-slate-900" />
+                      <div className="absolute left-1/2 top-full -translate-x-1/2 w-0 h-0 border-l-3 border-r-3 border-t-3 border-l-transparent border-r-transparent border-t-[var(--card)]" />
                     </div>
                   )}
                 </div>

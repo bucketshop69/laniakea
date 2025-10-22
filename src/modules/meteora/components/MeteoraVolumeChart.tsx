@@ -16,6 +16,15 @@ interface ChartPoint {
   fees: number
 }
 
+const volumeChartColors = {
+  grid: 'var(--border)',
+  axis: 'var(--muted-foreground)',
+  bar: 'var(--chart-2)',
+  tooltipBackground: 'var(--card)',
+  tooltipBorder: 'var(--border)',
+  tooltipFees: 'var(--chart-2)',
+}
+
 const formatCurrency = (value: number) => {
   if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(2)}M`
   if (value >= 1_000) return `$${(value / 1_000).toFixed(1)}K`
@@ -75,16 +84,16 @@ export const MeteoraVolumeChart = ({ data, isLoading, selectedPeriod, onPeriodCh
       <div className={`transition-opacity duration-200 ${isLoading ? 'opacity-40' : 'opacity-100'}`}>
         <ResponsiveContainer width="100%" height={160}>
         <BarChart data={chartData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.3} />
+          <CartesianGrid strokeDasharray="3 3" stroke={volumeChartColors.grid} opacity={0.3} />
           <XAxis
             dataKey="date"
-            stroke="#64748B"
+            stroke={volumeChartColors.axis}
             fontSize={10}
             tickLine={false}
             axisLine={false}
           />
           <YAxis
-            stroke="#64748B"
+            stroke={volumeChartColors.axis}
             fontSize={10}
             tickLine={false}
             axisLine={false}
@@ -98,7 +107,7 @@ export const MeteoraVolumeChart = ({ data, isLoading, selectedPeriod, onPeriodCh
               if (!data) return null
 
               return (
-                <div className="rounded-md border border-border/60 bg-slate-900/95 p-2 text-xs">
+                <div className="rounded-md border border-border/60 bg-card/95 p-2 text-xs">
                   <div className="font-semibold text-primary mb-1">{data.date}</div>
                   <div className="space-y-0.5">
                     <div className="flex justify-between gap-3">
@@ -107,14 +116,14 @@ export const MeteoraVolumeChart = ({ data, isLoading, selectedPeriod, onPeriodCh
                     </div>
                     <div className="flex justify-between gap-3">
                       <span className="text-muted-foreground">Fees:</span>
-                      <span className="text-emerald-400">{formatCurrency(data.fees)}</span>
+                      <span className="text-secondary-foreground">{formatCurrency(data.fees)}</span>
                     </div>
                   </div>
                 </div>
               )
             }}
           />
-          <Bar dataKey="volume" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="volume" fill={volumeChartColors.bar} radius={[4, 4, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
 

@@ -55,6 +55,17 @@ interface StatsProps {
     className?: string;
 }
 
+const chartColors = {
+    grid: 'var(--border)',
+    axis: 'var(--muted-foreground)',
+    volume: 'var(--chart-2)',
+    volumeActive: 'var(--chart-1)',
+    reference: 'var(--chart-4)',
+    line: 'var(--chart-1)',
+    lineActiveStroke: 'var(--card)',
+    tooltipCursor: 'var(--card)',
+};
+
 const formatCurrency = (value?: number | null, options: Intl.NumberFormatOptions = {}) => {
     if (value === null || value === undefined || Number.isNaN(value)) {
         return '—';
@@ -430,15 +441,15 @@ const Stats: React.FC<StatsProps> = ({ selectedPool, currentPool, chartData, cla
 
     const priceChangeValue = displayPool.priceChange24h ?? '—';
     const priceChangeClass = priceChangeValue.startsWith('+')
-        ? 'text-blue'
+        ? 'text-secondary-foreground'
         : priceChangeValue.startsWith('-')
-            ? 'text-red-400'
+            ? 'text-destructive'
             : 'text-muted-foreground';
 
     const driftPriceChangeValue = formatPercent(selectedDriftSnapshot?.change24hPct);
     const driftPriceChangeClass = selectedDriftSnapshot?.change24hPct !== undefined && selectedDriftSnapshot.change24hPct >= 0
-        ? 'text-emerald-400'
-        : 'text-red-400';
+        ? 'text-secondary-foreground'
+        : 'text-destructive';
 
     const primaryStatValue = isDrift
         ? formatCurrency(selectedDriftSnapshot?.markPrice)
@@ -553,10 +564,10 @@ const Stats: React.FC<StatsProps> = ({ selectedPool, currentPool, chartData, cla
                     ) : (
                         <ResponsiveContainer width="100%" height={520}>
                             <ComposedChart data={displayChartData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                                <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
                                 <XAxis
                                     dataKey="time"
-                                    stroke="#64748B"
+                                    stroke={chartColors.axis}
                                     fontSize={12}
                                     axisLine={false}
                                     tickLine={false}
@@ -564,7 +575,7 @@ const Stats: React.FC<StatsProps> = ({ selectedPool, currentPool, chartData, cla
                                 />
                                 <YAxis
                                     yAxisId="liquidity"
-                                    stroke="#64748B"
+                                    stroke={chartColors.axis}
                                     fontSize={12}
                                     domain={['auto', 'auto']}
                                     axisLine={false}
@@ -574,7 +585,7 @@ const Stats: React.FC<StatsProps> = ({ selectedPool, currentPool, chartData, cla
                                 <YAxis
                                     yAxisId="volume"
                                     orientation="right"
-                                    stroke="#64748B"
+                                    stroke={chartColors.axis}
                                     fontSize={12}
                                     domain={['auto', 'auto']}
                                     axisLine={false}
@@ -584,33 +595,33 @@ const Stats: React.FC<StatsProps> = ({ selectedPool, currentPool, chartData, cla
                                 <Bar
                                     yAxisId="volume"
                                     dataKey="volume"
-                                    fill="#22D3EE"
+                                    fill={chartColors.volume}
                                     opacity={0.45}
                                     radius={[4, 4, 0, 0]}
                                     name={shouldUseOverviewChart ? 'Volume (24h)' : `Total Liquidity${quoteSymbol ? ` (${quoteSymbol})` : ''}`}
                                 >
                                     {!shouldUseOverviewChart && displayChartData.map((point) => (
-                                        <Cell key={point.time} fill={point.isActive ? '#F97316' : '#22D3EE'} />
+                                        <Cell key={point.time} fill={point.isActive ? chartColors.volumeActive : chartColors.volume} />
                                     ))}
                                 </Bar>
                                 {!shouldUseOverviewChart && (
-                                    <ReferenceLine x="0" stroke="#F97316" strokeDasharray="3 3" />
+                                    <ReferenceLine x="0" stroke={chartColors.reference} strokeDasharray="3 3" />
                                 )}
                                 {shouldUseOverviewChart && (
                                     <Line
                                         yAxisId="liquidity"
                                         type="monotone"
                                         dataKey="price"
-                                        stroke="#3B82F6"
+                                        stroke={chartColors.line}
                                         strokeWidth={3}
                                         dot={false}
-                                        activeDot={{ r: 6, fill: '#3B82F6', stroke: '#1E293B', strokeWidth: 2 }}
+                                        activeDot={{ r: 6, fill: chartColors.line, stroke: chartColors.lineActiveStroke, strokeWidth: 2 }}
                                         name="Liquidity"
                                     />
                                 )}
                                 <Tooltip
                                     content={renderTooltip}
-                                    cursor={{ stroke: '#1E293B', strokeWidth: 1 }}
+                                    cursor={{ stroke: chartColors.tooltipCursor, strokeWidth: 1 }}
                                     wrapperStyle={{ outline: 'none' }}
                                 />
                             </ComposedChart>

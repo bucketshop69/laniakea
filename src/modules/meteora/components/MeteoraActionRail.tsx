@@ -35,7 +35,7 @@ function MeteoraActionRail<T extends string = string>({
             className={cn(
               'h-8 w-8 rounded-md border border-transparent text-muted-foreground transition-colors',
               'hover:bg-muted hover:text-primary',
-              isActive && 'border-blue bg-blue text-white hover:bg-blue hover:text-white'
+              isActive && 'border-primary bg-primary text-primary-foreground hover:bg-primary/90'
             )}
           >
             <action.icon className="h-5 w-5" />

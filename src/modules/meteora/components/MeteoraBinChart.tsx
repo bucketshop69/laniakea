@@ -34,6 +34,19 @@ type ChartDataPoint = {
   isActive: boolean
 }
 
+const binChartColors = {
+  grid: 'var(--border)',
+  axis: 'var(--muted-foreground)',
+  cursorFill: 'var(--card)',
+  barDefault: 'var(--chart-3)',
+  barRange: 'var(--chart-2)',
+  barActive: 'var(--chart-1)',
+  brushStroke: 'var(--chart-2)',
+  brushBackground: 'var(--card)',
+  tooltipBackground: 'var(--card)',
+  tooltipBorder: 'var(--border)',
+}
+
 const MeteoraBinChart = ({
   binData,
   activeBinId,
@@ -136,7 +149,7 @@ const MeteoraBinChart = ({
     if (!data) return null
 
     return (
-      <div className="rounded border border-border/60 bg-slate-900/95 p-2 text-[9px] text-muted-foreground">
+      <div className="rounded border border-border/60 bg-card/95 p-2 text-[9px] text-muted-foreground">
         <div className="font-semibold text-primary">
           {data.isActive ? 'Active Bin' : `Δ ${data.delta > 0 ? '+' : ''}${data.delta}`}
         </div>
@@ -158,28 +171,28 @@ const MeteoraBinChart = ({
   }
 
   return (
-    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <div className="flex h-full w-full flex-col">
       <ResponsiveContainer width="100%" height="85%">
         <BarChart
           data={chartData}
           margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
         >
-          <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.3} />
+          <CartesianGrid strokeDasharray="3 3" stroke={binChartColors.grid} opacity={0.3} />
           <XAxis
             dataKey="pricePerToken"
-            stroke="#64748B"
+            stroke={binChartColors.axis}
             fontSize={9}
             tickFormatter={(value) => Number(value).toFixed(4)}
             axisLine={false}
             tickLine={false}
           />
-          <Tooltip content={<CustomTooltip />} cursor={{ fill: '#1E293B', opacity: 0.3 }} />
+          <Tooltip content={<CustomTooltip />} cursor={{ fill: binChartColors.cursorFill, opacity: 0.3 }} />
           <Bar dataKey="liquidity" radius={[2, 2, 0, 0]}>
             {chartData.map((entry, index) => {
               const isInRange = index >= minIndex && index <= maxIndex
-              let fillColor = '#22D3EE'
-              if (entry.isActive) fillColor = '#F97316'
-              else if (isInRange) fillColor = '#3B82F6'
+              let fillColor = binChartColors.barDefault
+              if (entry.isActive) fillColor = binChartColors.barActive
+              else if (isInRange) fillColor = binChartColors.barRange
 
               return (
                 <Cell
@@ -200,8 +213,8 @@ const MeteoraBinChart = ({
           <Brush
             dataKey="pricePerToken"
             height={20}
-            stroke="#3B82F6"
-            fill="#1E293B"
+            stroke={binChartColors.brushStroke}
+            fill={binChartColors.brushBackground}
             startIndex={minIndex}
             endIndex={maxIndex}
             onChange={handleBrushChange}

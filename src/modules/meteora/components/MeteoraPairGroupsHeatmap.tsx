@@ -31,6 +31,10 @@ const formatPercent = (value: number): string => {
   return `${value.toFixed(2)}%`
 }
 
+const CARD_BASE_CLASS = 'rounded-lg cursor-pointer transition-all duration-200 hover:opacity-90 hover:scale-[1.02] border border-border/40 bg-card/40 hover:border-border'
+
+const STACKED_CARD_HEIGHTS = ['min-h-[28px]', 'min-h-[22px]', 'min-h-[18px]']
+
 export const MeteoraPairGroupsHeatmap = ({
   pairGroups,
   metric = 'volume',
@@ -108,7 +112,7 @@ export const MeteoraPairGroupsHeatmap = ({
           <p className="text-2xl font-bold text-primary">
             {formatNumber(protocolMetrics?.total_tvl ?? 0)}
           </p>
-          <p className="text-sm text-emerald-400">
+          <p className="text-sm text-secondary-foreground">
             {formatNumber(protocolMetrics?.daily_trade_volume ?? 0)} (24h Volume)
           </p>
         </div>
@@ -121,8 +125,7 @@ export const MeteoraPairGroupsHeatmap = ({
           {cards[0] && (
             <div
               key={cards[0].name}
-              className="col-span-6 p-1 rounded-lg cursor-pointer transition-all duration-200 hover:opacity-90 hover:scale-[1.02] bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/20 hover:border-blue-500/40"
-              style={{ minHeight: '50px' }}
+              className={`col-span-6 p-1 min-h-[50px] ${CARD_BASE_CLASS}`}
               onClick={() => onCardClick?.(cards[0].originalGroup)}
             >
               <div className="flex flex-col h-full">
@@ -140,7 +143,7 @@ export const MeteoraPairGroupsHeatmap = ({
                   {cards[0].farmApy > 0 && (
                     <div className="flex justify-between items-center">
                       <span className="text-xs text-muted-foreground">Max APY</span>
-                      <span className="text-xs text-emerald-400 font-medium">{formatPercent(cards[0].farmApy)}</span>
+                      <span className="text-xs text-secondary-foreground font-medium">{formatPercent(cards[0].farmApy)}</span>
                     </div>
                   )}
                 </div>
@@ -150,8 +153,7 @@ export const MeteoraPairGroupsHeatmap = ({
           {cards[1] && (
             <div
               key={cards[1].name}
-              className="col-span-4 p-1 rounded-lg cursor-pointer transition-all duration-200 hover:opacity-90 hover:scale-[1.02] bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/20 hover:border-blue-500/40"
-              style={{ minHeight: '50px' }}
+              className={`col-span-4 p-1 min-h-[50px] ${CARD_BASE_CLASS}`}
               onClick={() => onCardClick?.(cards[1].originalGroup)}
             >
               <div className="flex flex-col h-full">
@@ -169,7 +171,7 @@ export const MeteoraPairGroupsHeatmap = ({
                   {cards[1].farmApy > 0 && (
                     <div className="flex justify-between items-center">
                       <span className="text-xs text-muted-foreground">Max APY</span>
-                      <span className="text-xs text-emerald-400 font-medium">{formatPercent(cards[1].farmApy)}</span>
+                      <span className="text-xs text-secondary-foreground font-medium">{formatPercent(cards[1].farmApy)}</span>
                     </div>
                   )}
                 </div>
@@ -183,8 +185,7 @@ export const MeteoraPairGroupsHeatmap = ({
           {cards[2] && (
             <div
               key={cards[2].name}
-              className="col-span-4 p-1 rounded-lg cursor-pointer transition-all duration-200 hover:opacity-90 hover:scale-[1.02] bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/20 hover:border-blue-500/40"
-              style={{ minHeight: '45px' }}
+              className={`col-span-4 p-1 min-h-[45px] ${CARD_BASE_CLASS}`}
               onClick={() => onCardClick?.(cards[2].originalGroup)}
             >
               <div className="flex flex-col h-full">
@@ -202,7 +203,7 @@ export const MeteoraPairGroupsHeatmap = ({
                   {cards[2].farmApy > 0 && (
                     <div className="flex justify-between items-center">
                       <span className="text-xs text-muted-foreground">Max APY</span>
-                      <span className="text-xs text-emerald-400 font-medium">{formatPercent(cards[2].farmApy)}</span>
+                      <span className="text-xs text-secondary-foreground font-medium">{formatPercent(cards[2].farmApy)}</span>
                     </div>
                   )}
                 </div>
@@ -212,8 +213,7 @@ export const MeteoraPairGroupsHeatmap = ({
           {cards[3] && (
             <div
               key={cards[3].name}
-              className="col-span-3 p-1 rounded-lg cursor-pointer transition-all duration-200 hover:opacity-90 hover:scale-[1.02] bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/20 hover:border-blue-500/40"
-              style={{ minHeight: '45px' }}
+              className={`col-span-3 p-1 min-h-[45px] ${CARD_BASE_CLASS}`}
               onClick={() => onCardClick?.(cards[3].originalGroup)}
             >
               <div className="flex flex-col h-full">
@@ -231,7 +231,7 @@ export const MeteoraPairGroupsHeatmap = ({
                   {cards[3].farmApy > 0 && (
                     <div className="flex justify-between items-center">
                       <span className="text-xs text-muted-foreground">Max APY</span>
-                      <span className="text-xs text-emerald-400 font-medium">{formatPercent(cards[3].farmApy)}</span>
+                      <span className="text-xs text-secondary-foreground font-medium">{formatPercent(cards[3].farmApy)}</span>
                     </div>
                   )}
                 </div>
@@ -241,8 +241,7 @@ export const MeteoraPairGroupsHeatmap = ({
           {cards[4] && (
             <div
               key={cards[4].name}
-              className="col-span-3 p-1 rounded-lg cursor-pointer transition-all duration-200 hover:opacity-90 hover:scale-[1.02] bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/20 hover:border-blue-500/40"
-              style={{ minHeight: '45px' }}
+              className={`col-span-3 p-1 min-h-[45px] ${CARD_BASE_CLASS}`}
               onClick={() => onCardClick?.(cards[4].originalGroup)}
             >
               <div className="flex flex-col h-full">
@@ -260,7 +259,7 @@ export const MeteoraPairGroupsHeatmap = ({
                   {cards[4].farmApy > 0 && (
                     <div className="flex justify-between items-center">
                       <span className="text-xs text-muted-foreground">Max APY</span>
-                      <span className="text-xs text-emerald-400 font-medium">{formatPercent(cards[4].farmApy)}</span>
+                      <span className="text-xs text-secondary-foreground font-medium">{formatPercent(cards[4].farmApy)}</span>
                     </div>
                   )}
                 </div>
@@ -275,8 +274,7 @@ export const MeteoraPairGroupsHeatmap = ({
           {cards[5] && (
             <div
               key={cards[5].name}
-              className="col-span-4 p-1 rounded-lg cursor-pointer transition-all duration-200 hover:opacity-90 hover:scale-[1.02] bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/20 hover:border-blue-500/40"
-              style={{ minHeight: '70px' }}
+              className={`col-span-4 p-1 min-h-[70px] ${CARD_BASE_CLASS}`}
               onClick={() => onCardClick?.(cards[5].originalGroup)}
             >
               <div className="flex flex-col h-full">
@@ -294,7 +292,7 @@ export const MeteoraPairGroupsHeatmap = ({
                   {cards[5].farmApy > 0 && (
                     <div className="flex justify-between items-center">
                       <span className="text-xs text-muted-foreground">Max APY</span>
-                      <span className="text-xs text-emerald-400 font-medium">{formatPercent(cards[5].farmApy)}</span>
+                      <span className="text-xs text-secondary-foreground font-medium">{formatPercent(cards[5].farmApy)}</span>
                     </div>
                   )}
                 </div>
@@ -307,15 +305,14 @@ export const MeteoraPairGroupsHeatmap = ({
             {[cards[6], cards[7], cards[8]].map((card, idx) => card && (
               <div
                 key={card.name}
-                className="p-3 rounded-lg cursor-pointer transition-all duration-200 hover:opacity-90 hover:scale-[1.02] bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/20 hover:border-blue-500/40"
-                style={{ minHeight: idx === 0 ? '28px' : idx === 1 ? '22px' : '18px' }}
+                className={`p-3 ${CARD_BASE_CLASS} ${STACKED_CARD_HEIGHTS[idx] ?? STACKED_CARD_HEIGHTS[STACKED_CARD_HEIGHTS.length - 1]}`}
                 onClick={() => onCardClick?.(card.originalGroup)}
               >
                 <div className="text-xs font-semibold text-primary mb-1">{card.name}</div>
                 <div className="text-lg font-bold text-primary mb-1">{formatNumber(card.value)}</div>
                 <div className="text-[10px] text-muted-foreground flex justify-between">
                   <span>{card.poolCount} pools</span>
-                  {card.farmApy > 0 && <span className="text-emerald-400">{formatPercent(card.farmApy)}</span>}
+                  {card.farmApy > 0 && <span className="text-secondary-foreground">{formatPercent(card.farmApy)}</span>}
                 </div>
               </div>
             ))}
@@ -326,15 +323,14 @@ export const MeteoraPairGroupsHeatmap = ({
             {[cards[9], cards[10], cards[11]].map((card, idx) => card && (
               <div
                 key={card.name}
-                className="p-3 rounded-lg cursor-pointer transition-all duration-200 hover:opacity-90 hover:scale-[1.02] bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/20 hover:border-blue-500/40"
-                style={{ minHeight: idx === 0 ? '28px' : idx === 1 ? '22px' : '18px' }}
+                className={`p-3 ${CARD_BASE_CLASS} ${STACKED_CARD_HEIGHTS[idx] ?? STACKED_CARD_HEIGHTS[STACKED_CARD_HEIGHTS.length - 1]}`}
                 onClick={() => onCardClick?.(card.originalGroup)}
               >
                 <div className="text-xs font-semibold text-primary mb-1">{card.name}</div>
                 <div className="text-lg font-bold text-primary mb-1">{formatNumber(card.value)}</div>
                 <div className="text-[10px] text-muted-foreground flex justify-between">
                   <span>{card.poolCount} pools</span>
-                  {card.farmApy > 0 && <span className="text-emerald-400">{formatPercent(card.farmApy)}</span>}
+                  {card.farmApy > 0 && <span className="text-secondary-foreground">{formatPercent(card.farmApy)}</span>}
                 </div>
               </div>
             ))}

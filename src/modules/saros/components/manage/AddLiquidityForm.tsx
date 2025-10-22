@@ -48,7 +48,7 @@ interface AddLiquidityFormProps {
 
 const formatPercentTone = (value: number | null) => {
   if (value === null) return 'text-muted-foreground'
-  return value < 0 ? 'text-red-400' : 'text-blue-400'
+  return value < 0 ? 'text-destructive' : 'text-secondary-foreground'
 }
 
 const AddLiquidityForm = ({

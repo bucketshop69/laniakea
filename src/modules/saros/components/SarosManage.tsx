@@ -309,7 +309,7 @@ const SarosManage = ({ onBack }: SarosManageProps) => {
   if (isLoading) {
     priceLabel = 'Loading…'
   } else if (error) {
-    priceTone = 'text-[11px] text-red-400'
+    priceTone = 'text-[11px] text-destructive'
     priceLabel = error
   } else if (metadata) {
     const effectivePrice = displayActiveBinPrice ?? price

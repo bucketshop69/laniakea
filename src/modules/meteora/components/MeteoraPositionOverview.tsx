@@ -76,21 +76,21 @@ export const MeteoraPositionOverview = ({ pool }: MeteoraPositionOverviewProps) 
 
     // Determine signal
     let signal: 'enter' | 'wait' | 'risky' | 'avoid' = 'enter'
-    let signalColor = 'text-emerald-400'
-    let signalBg = 'bg-emerald-500/20'
+    let signalColor = 'text-secondary-foreground'
+    let signalBg = 'bg-secondary/30'
 
     if (riskScore > 7) {
       signal = 'risky'
-      signalColor = 'text-yellow-400'
-      signalBg = 'bg-yellow-500/20'
+      signalColor = 'text-secondary-foreground'
+      signalBg = 'bg-secondary/20'
     } else if (riskScore > 5 && pool.apy < 20) {
       signal = 'wait'
-      signalColor = 'text-blue-400'
-      signalBg = 'bg-blue-500/20'
+      signalColor = 'text-muted-foreground'
+      signalBg = 'bg-muted/30'
     } else if (pool.trade_volume_24h < 100_000) {
       signal = 'avoid'
-      signalColor = 'text-red-400'
-      signalBg = 'bg-red-500/20'
+      signalColor = 'text-destructive'
+      signalBg = 'bg-destructive/10'
     }
 
     return {
@@ -119,7 +119,7 @@ export const MeteoraPositionOverview = ({ pool }: MeteoraPositionOverviewProps) 
   if (error) {
     return (
       <div className="p-4">
-        <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-300">
+        <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
           Failed to load pool analytics. {error}
         </div>
       </div>

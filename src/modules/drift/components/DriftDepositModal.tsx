@@ -66,7 +66,7 @@ export const DriftDepositModal = ({ open, onOpenChange, defaultAssetSymbol = 'US
             />
           </div>
 
-          {error && <div className="text-xs text-red-400">{error}</div>}
+          {error && <div className="text-xs text-destructive">{error}</div>}
 
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="outline" size="sm" onClick={() => onOpenChange(false)} disabled={submitting}>

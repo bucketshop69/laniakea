@@ -58,6 +58,13 @@ Real-time information and notifications relevant to user's positions and market 
 - **Protocol News**: Updates from the specific dapp/protocol
 - **Performance Notifications**: Significant PnL changes, milestone alerts
 
+**Features**:
+- **Timeline View**: Events organized chronologically with a "NOW" marker
+- **Chart Annotations**: Save feed events as markers on price charts
+- **Asset Filtering**: View events for specific assets (BTC, SOL, ETH, etc.)
+- **Wallet Integration**: Personal annotation system tied to connected wallet
+- **Cross-Chart Sync**: Annotations visible across all relevant asset charts
+
 ## Implementation Benefits
 
 - **Consistency**: Users learn one interface pattern that works across all protocols
@@ -124,3 +131,33 @@ src/modules/saros/
 ```
 
 All Saros-specific hooks, services, and state live within `src/modules/saros/...` so additional dapps can plug in their own module-local implementations without polluting the global `src/` namespace.
+
+## Feed Module Folder Structure
+
+```
+src/modules/feed/
+├── components/
+│   ├── FeedCard.tsx              # Individual feed item card
+│   ├── FeedPanel.tsx             # Main feed container with timeline
+│   └── FeedSettings.tsx          # Feed preferences and filters
+├── services/
+│   ├── annotationService.ts      # Chart annotation CRUD operations
+│   └── feedService.ts            # Feed item data fetching
+├── state/
+│   ├── annotationStore.ts        # Zustand store for annotations
+│   └── feedStore.ts              # Zustand store for feed items
+├── types/
+│   └── feedTypes.ts              # TypeScript interfaces
+└── SECURITY.md                   # Security considerations and roadmap
+```
+
+**Database Schema (Supabase)**:
+- `feed_items`: Market events, news, protocol updates
+- `chart_annotations`: User-saved annotations linked to feed events
+
+**Key Features**:
+- Wallet-based annotation system (max 10 per asset)
+- Asset-specific chart markers with tooltips
+- Optimized queries (single getAllUserAnnotations call)
+- Race condition protection with loading refs
+- Graceful error handling and empty states

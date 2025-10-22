@@ -143,7 +143,7 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
                                     </label>
                                     <Select value={selectedPool} onValueChange={onSelectedPoolChange}>
                                         <SelectTrigger className="w-full px-3 py-3 text-primary text-left flex items-center 
-                                justify-between hover:border-blue transition-all duration-300">
+                                justify-between hover:border-primary transition-all duration-300">
                                             <span className="text-sm ml-2">
                                                 {currentPool.apy} APY
                                             </span>
@@ -163,7 +163,7 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
                                                                 TVL: {pool.tvl} • Fee: {pool.fee}
                                                             </div>
                                                         </div>
-                                                        <span className="text-blue text-sm font-medium">{pool.apy}</span>
+                                                        <span className="text-secondary-foreground text-sm font-medium">{pool.apy}</span>
                                                     </div>
                                                 </SelectItem>
                                             ))}
@@ -218,7 +218,7 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
                                                 </div>
                                                 <div className="flex justify-between text-sm">
                                                     <span className="">Pool Share</span>
-                                                    <span className="text-blue">{addAmount ? (parseFloat(addAmount) * 0.01).toFixed(2) : '0.00'}%</span>
+                                                    <span className="text-secondary-foreground">{addAmount ? (parseFloat(addAmount) * 0.01).toFixed(2) : '0.00'}%</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -235,23 +235,23 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
 
                                         {showSimulation && addAmount && parseFloat(addAmount) > 0 && (
                                             <div className="-dark p-1 space-y-2">
-                                                <p className="text-purple text-xs font-medium mb-2">Strategy Simulation</p>
+                                                <p className="text-secondary-foreground text-xs font-medium mb-2">Strategy Simulation</p>
                                                 <div className="space-y-1 text-xs">
                                                     <div className="flex justify-between">
                                                         <span className="">Projected APY</span>
-                                                        <span className="text-blue">{currentPool.apy}</span>
+                                                        <span className="text-secondary-foreground">{currentPool.apy}</span>
                                                     </div>
                                                     <div className="flex justify-between">
                                                         <span className="">IL Risk (30d)</span>
-                                                        <span className="text-yellow-400">2.3%</span>
+                                                        <span className="text-muted-foreground">2.3%</span>
                                                     </div>
                                                     <div className="flex justify-between">
                                                         <span className="">Expected Return (30d)</span>
-                                                        <span className="text-blue">+${(parseFloat(addAmount) * 0.02).toFixed(0)}</span>
+                                                        <span className="text-secondary-foreground">+${(parseFloat(addAmount) * 0.02).toFixed(0)}</span>
                                                     </div>
                                                     <div className="flex justify-between">
                                                         <span className="">Max Drawdown</span>
-                                                        <span className="text-red-400">-5.1%</span>
+                                                        <span className="text-destructive">-5.1%</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -285,7 +285,7 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
                                         </div>
 
                                         <div className="-dark p-1">
-                                            <p className="text-purple text-xs mb-2 font-medium">You will receive</p>
+                                            <p className="text-secondary-foreground text-xs mb-2 font-medium">You will receive</p>
                                             <div className="space-y-1">
                                                 <div className="flex justify-between text-sm">
                                                     <span className="">{selectedPool.split('/')[0]}</span>
@@ -311,11 +311,11 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
                                     <div className="space-y-2 text-xs">
                                         <div className="flex justify-between">
                                             <span className="">Fee</span>
-                                            <span className="text-blue">{currentPool.fee}</span>
+                                            <span className="text-secondary-foreground">{currentPool.fee}</span>
                                         </div>
                                         <div className="flex justify-between">
                                             <span className="">Network</span>
-                                            <span className="text-blue">Ethereum</span>
+                                            <span className="text-secondary-foreground">Ethereum</span>
                                         </div>
                                         <div className="flex justify-between">
                                             <span className="">Status</span>

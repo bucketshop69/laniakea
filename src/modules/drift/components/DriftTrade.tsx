@@ -307,7 +307,7 @@ const DriftTrade = () => {
           size="sm"
           className={cn(
             'col-span-4 h-10 font-bold',
-            direction === 'long' && 'bg-emerald-500 text-white hover:bg-emerald-600 border-emerald-500'
+            direction === 'long' && 'border-secondary/60 bg-secondary/30 text-secondary-foreground hover:bg-secondary/40'
           )}
           onClick={() => setDirection('long')}
         >
@@ -320,7 +320,7 @@ const DriftTrade = () => {
           size="sm"
           className={cn(
             'col-span-4 h-10 font-bold',
-            direction === 'short' && 'bg-red-500 text-white hover:bg-red-600 border-red-500'
+            direction === 'short' && 'border-destructive/60 bg-destructive/15 text-destructive hover:bg-destructive/25'
           )}
           onClick={() => setDirection('short')}
         >
@@ -359,7 +359,7 @@ const DriftTrade = () => {
                   setPercent(p);
                   handlePercent(p);
                 }}
-                className="h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-blue"
+                className="h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-secondary-foreground"
               />
               <div className="grid grid-cols-5 gap-1 text-[10px] text-muted-foreground">
                 {['0%', '25%', '50%', '75%', '100%'].map((t) => (
@@ -456,7 +456,7 @@ const DriftTrade = () => {
               <span className="text-muted-foreground">
                 Entry: {formatPrice(preview?.limitPrice ?? preview?.executionPrice ?? estimatedEntry)}
               </span>
-              <span className="text-orange-400">Liq: {preview?.liquidationPrice ? formatPrice(preview.liquidationPrice) : '—'}</span>
+              <span className="text-secondary-foreground">Liq: {preview?.liquidationPrice ? formatPrice(preview.liquidationPrice) : '—'}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">
@@ -474,8 +474,8 @@ const DriftTrade = () => {
             className={cn(
               'w-full h-10 font-bold',
               direction === 'long'
-                ? 'bg-emerald-500 text-white hover:bg-emerald-600'
-                : 'bg-red-500 text-white hover:bg-red-600'
+                ? 'border border-secondary/60 bg-secondary/40 text-secondary-foreground hover:bg-secondary/50'
+                : 'border border-destructive/60 bg-destructive text-foreground hover:bg-destructive/90'
             )}
             onClick={handleTrade}
             disabled={

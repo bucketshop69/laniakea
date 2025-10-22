@@ -15,6 +15,7 @@ export const FeedPanel: React.FC = () => {
 
   const nowMarkerRef = useRef<HTMLDivElement>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const loadingAnnotationsRef = useRef(false) // Prevent race conditions
 
   // Wallet and annotation integration
   const { publicKey } = useWallet()
@@ -34,7 +35,9 @@ export const FeedPanel: React.FC = () => {
   // Load ALL user annotations (across all assets) for Feed display
   // This is separate from chart annotations which are asset-specific
   useEffect(() => {
-    if (publicKey) {
+    if (publicKey && !loadingAnnotationsRef.current) {
+      loadingAnnotationsRef.current = true
+
       const loadAllAnnotations = async () => {
         try {
           // Use getAllUserAnnotations() instead of N+1 queries
@@ -48,12 +51,15 @@ export const FeedPanel: React.FC = () => {
           console.error('[FeedPanel] Failed to load all annotations:', error)
           // Continue with empty annotations rather than breaking the UI
           setAllUserAnnotations([])
+        } finally {
+          loadingAnnotationsRef.current = false
         }
       }
 
       loadAllAnnotations()
-    } else {
+    } else if (!publicKey) {
       setAllUserAnnotations([])
+      loadingAnnotationsRef.current = false
     }
   }, [publicKey])
 
@@ -219,12 +225,12 @@ export const FeedPanel: React.FC = () => {
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center h-64 space-y-3">
-        <AlertCircle className="w-8 h-8 text-red-400" />
-        <p className="text-sm text-red-400">Failed to load feed</p>
+        <AlertCircle className="w-8 h-8 text-destructive" />
+        <p className="text-sm text-destructive">Failed to load feed</p>
         <p className="text-xs text-muted-foreground">{error}</p>
         <button
           onClick={() => loadFeedItems()}
-          className="text-xs text-blue-400 hover:text-blue-300 underline"
+          className="text-xs text-secondary-foreground underline hover:text-primary"
         >
           Retry
         </button>
