@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Plus, Search, Droplets } from 'lucide-react';
 import { Card } from '@/components/ui/card';
-import SarosActionRail, { type SarosActionDefinition } from './SarosActionRail';
+import ActionRail, { type ActionDefinition } from '@/components/ui/ActionRail';
 import SarosDiscover from './SarosDiscover';
 import SarosManage from './SarosManage';
 import SarosCreatePool from './SarosCreatePool';
@@ -14,7 +14,7 @@ const SarosAction = () => {
     const setActiveAction = useSarosStore((state) => state.setActiveView);
     const setSelectedPoolAddress = useSarosStore((state) => state.setSelectedPoolAddress);
 
-    const actions = useMemo<SarosActionDefinition<SarosView>[]>(
+    const actions = useMemo<ActionDefinition<SarosView>[]>(
         () => [
             { id: 'discover', icon: Search, label: 'Discover pools' },
             { id: 'create', icon: Plus, label: 'Create pool' },
@@ -57,7 +57,7 @@ const SarosAction = () => {
 
     return (
         <div className="grid h-full grid-cols-12 gap-1">
-            <SarosActionRail actions={actions} activeAction={activeAction} onSelect={setActiveAction} />
+            <ActionRail actions={actions} activeAction={activeAction} onSelect={setActiveAction} />
             <div className="col-span-11 flex flex-col">{renderContent()}</div>
         </div>
     );

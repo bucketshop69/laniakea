@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { Search, User, Droplets } from 'lucide-react'
 import { Card } from '@/components/ui/card'
-import MeteoraActionRail, { type MeteoraActionDefinition } from './MeteoraActionRail'
+import ActionRail, { type ActionDefinition } from '@/components/ui/ActionRail'
 import MeteoraDiscover from './MeteoraDiscover'
 import MeteoraManage from './MeteoraManage'
 import MeteoraProfile from './MeteoraProfile'
@@ -14,7 +14,7 @@ const MeteoraAction = () => {
   const setActiveAction = useMeteoraStore((state) => state.setActiveView)
   const setSelectedPoolAddress = useMeteoraStore((state) => state.setSelectedPoolAddress)
 
-  const actions = useMemo<MeteoraActionDefinition<MeteoraView>[]>(
+  const actions = useMemo<ActionDefinition<MeteoraView>[]>(
     () => [
       { id: 'discover', icon: Search, label: 'Discover pools' },
       { id: 'manage', icon: Droplets, label: 'Manage liquidity' },
@@ -57,7 +57,7 @@ const MeteoraAction = () => {
 
   return (
     <div className="grid h-full grid-cols-12 gap-1">
-      <MeteoraActionRail actions={actions} activeAction={activeAction} onSelect={setActiveAction} />
+      <ActionRail actions={actions} activeAction={activeAction} onSelect={setActiveAction} />
       <div className="col-span-11 flex flex-col">{renderContent()}</div>
     </div>
   )
