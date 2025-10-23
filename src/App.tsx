@@ -255,6 +255,8 @@ const SpaceLiquidityPool = () => {
           portfolioData={portfolioData}
           positions={positions}
           newsItems={newsItems}
+          currentPool={currentPool}
+          chartData={chartData}
         />
       </div>
     </div>

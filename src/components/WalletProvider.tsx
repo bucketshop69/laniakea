@@ -14,9 +14,10 @@ import '@solana/wallet-adapter-react-ui/styles.css';
 
 interface WalletContextProviderProps {
   children: ReactNode;
+  autoConnect?: boolean;
 }
 
-export const WalletContextProvider: FC<WalletContextProviderProps> = ({ children }) => {
+export const WalletContextProvider: FC<WalletContextProviderProps> = ({ children, autoConnect = false }) => {
   // Use mainnet-beta, devnet, or testnet
   const network = 'mainnet-beta';
   const endpoint = useMemo(() => getSolanaEndpoint(), [network]);
@@ -34,7 +35,7 @@ export const WalletContextProvider: FC<WalletContextProviderProps> = ({ children
 
   return (
     <ConnectionProvider endpoint={endpoint}>
-      <WalletProvider wallets={wallets} autoConnect>
+      <WalletProvider wallets={wallets} autoConnect={autoConnect}>
         <WalletModalProvider>
           {children}
         </WalletModalProvider>
