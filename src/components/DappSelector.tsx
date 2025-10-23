@@ -30,9 +30,9 @@ const DappSelector: FC<DappSelectorProps> = ({ dapps, selectedId, onSelect }) =>
                 size="icon"
                 onClick={() => onSelect(dapp.id)}
                 className={cn(
-                  'h-10 w-10  border border-transparent  p-1 transition-all duration-200',
-                  'hover:bg-muted hover:border-muted-foreground/30',
-                  isActive && 'border-primary bg-primary/10'
+                  'h-10 w-10 rounded-md border border-transparent text-primary transition-colors',
+                  'hover:bg-muted hover:text-primary',
+                  isActive && 'border-border'
                 )}
               >
                 <img

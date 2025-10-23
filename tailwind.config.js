@@ -6,6 +6,9 @@ export default {
     ],
     theme: {
         extend: {
+            fontFamily: {
+                itim: ['Itim', 'cursive'],
+            },
             colors: {
                 border: "var(--border)",
                 input: "var(--input)",

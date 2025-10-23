@@ -14,6 +14,7 @@ import { useSarosDataStore } from '@/modules/saros/state';
 import { useMeteoraDataStore } from '@/modules/meteora/state';
 import { WalletButton } from './WalletButton';
 import { FeedPanel } from '@/modules/feed/components';
+import Stats from '@/components/Stats';
 
 interface Pool {
     pair: string;
@@ -58,6 +59,16 @@ interface NewsItem {
     date?: string;
 }
 
+interface ChartDataPoint {
+    time: string;
+    price: number;
+    volume: number;
+    reserveBase?: number;
+    reserveQuote?: number;
+    binId?: number;
+    isActive?: boolean;
+}
+
 interface ActionPanelProps {
     selectedPool: string;
     onSelectedPoolChange: (pool: string) => void;
@@ -65,6 +76,8 @@ interface ActionPanelProps {
     portfolioData: PortfolioData;
     positions: Position[];
     newsItems: NewsItem[];
+    currentPool: Pool;
+    chartData: ChartDataPoint[];
 }
 
 const ActionPanel: React.FC<ActionPanelProps> = ({
@@ -74,6 +87,8 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
     portfolioData,
     positions,
     newsItems,
+    currentPool,
+    chartData,
 }) => {
     const [mainTab, setMainTab] = useState('manage');
     const [manageSubTab, setManageSubTab] = useState('add');
@@ -91,7 +106,6 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
         { id: 'saros', name: 'Saros', iconSrc: '/saros/SAROS_Mark_Purple.png' },
     ];
 
-    const currentPool = pools.find(p => p.pair === selectedPool) || pools[0];
     const handleDappSelection = (id: string) => {
         setSelectedDapp(id as SupportedDapp);
         setMainTab('manage');
@@ -126,7 +140,15 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
                             <User size={16} className="mr-1" />Profile</TabsTrigger>
                         <TabsTrigger value="feed" className="flex-1 data-[state=active]:bg-transparent data-[state=active]:text-primary"><Rss size={16} className="mr-1" />Feed</TabsTrigger>
                     </TabsList>
-
+                    <div className="md:hidden mx-1 mt-2 h-[25vh] overflow-hidden">
+                        <Stats
+                            selectedPool={selectedPool}
+                            currentPool={currentPool}
+                            chartData={chartData}
+                            className="h-full"
+                            chartHeight="100%"
+                        />
+                    </div>
                     <TabsContent value="manage" className="flex-1 px-1">
                         {selectedDapp === 'saros' ? (
                             <SarosAction />
@@ -405,6 +427,8 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
                         <FeedPanel />
                     </TabsContent>
                 </Tabs>
+
+
             </Card>
         </div >
     );

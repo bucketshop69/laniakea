@@ -120,5 +120,9 @@
 
   body {
     @apply bg-background text-foreground;
+    font-family: 'Itim', cursive;
+    font-weight: normal;
+    font-size: 1.1rem;
+    line-height: 1.5;
   }
 }

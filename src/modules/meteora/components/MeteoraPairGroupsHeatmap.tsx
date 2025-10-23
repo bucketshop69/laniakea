@@ -16,6 +16,7 @@ interface MeteoraPairGroupsHeatmapProps {
   pairGroups: MeteoraPairGroup[]
   metric?: 'tvl' | 'volume'
   onCardClick?: (pairGroup: MeteoraPairGroup) => void
+  variant?: 'default' | 'compact'
 }
 
 const formatNumber = (value: number): string => {
@@ -39,6 +40,7 @@ export const MeteoraPairGroupsHeatmap = ({
   pairGroups,
   metric = 'volume',
   onCardClick,
+  variant = 'default',
 }: MeteoraPairGroupsHeatmapProps) => {
   // Fetch protocol metrics
   const {
@@ -74,6 +76,8 @@ export const MeteoraPairGroupsHeatmap = ({
     })
   }, [pairGroups, metric])
 
+  const isCompact = variant === 'compact'
+
   if (protocolLoading) {
     return (
       <div className="flex h-[320px] items-center justify-center rounded-lg border border-dashed border-border/40 text-sm text-muted-foreground">
@@ -103,13 +107,13 @@ export const MeteoraPairGroupsHeatmap = ({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold text-primary mb-1">Meteora Market Overview</h2>
+          <h2 className="text-xl text-primary mb-1">Meteora Market Overview</h2>
           <p className="text-sm text-muted-foreground">Top Pair Groups by 24h Volume</p>
         </div>
 
         {/* Primary stats */}
         <div className="text-right">
-          <p className="text-2xl font-bold text-primary">
+          <p className="text-2xl text-primary">
             {formatNumber(protocolMetrics?.total_tvl ?? 0)}
           </p>
           <p className="text-sm text-secondary-foreground">
@@ -131,7 +135,7 @@ export const MeteoraPairGroupsHeatmap = ({
               <div className="flex flex-col h-full">
                 <div className="mb-3">
                   <div className="text-sm font-semibold text-primary mb-2">{cards[0].name}</div>
-                  <div className="text-2xl font-bold text-primary mb-1">{formatNumber(cards[0].value)}</div>
+                  <div className="text-2xl text-primary mb-1">{formatNumber(cards[0].value)}</div>
                   <div className="text-xs text-muted-foreground">24h Volume</div>
                 </div>
                 <div className="flex-1" />
@@ -159,7 +163,7 @@ export const MeteoraPairGroupsHeatmap = ({
               <div className="flex flex-col h-full">
                 <div className="mb-3">
                   <div className="text-sm font-semibold text-primary mb-2">{cards[1].name}</div>
-                  <div className="text-2xl font-bold text-primary mb-1">{formatNumber(cards[1].value)}</div>
+                  <div className="text-2xl text-primary mb-1">{formatNumber(cards[1].value)}</div>
                   <div className="text-xs text-muted-foreground">24h Volume</div>
                 </div>
                 <div className="flex-1" />
@@ -191,7 +195,7 @@ export const MeteoraPairGroupsHeatmap = ({
               <div className="flex flex-col h-full">
                 <div className="mb-3">
                   <div className="text-sm font-semibold text-primary mb-2">{cards[2].name}</div>
-                  <div className="text-2xl font-bold text-primary mb-1">{formatNumber(cards[2].value)}</div>
+                  <div className="text-2xl text-primary mb-1">{formatNumber(cards[2].value)}</div>
                   <div className="text-xs text-muted-foreground">24h Volume</div>
                 </div>
                 <div className="flex-1" />

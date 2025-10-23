@@ -53,6 +53,7 @@ interface StatsProps {
     currentPool: Pool;
     chartData: ChartDataPoint[];
     className?: string;
+    chartHeight?: number | string;
 }
 
 const chartColors = {
@@ -86,7 +87,7 @@ const formatPercent = (value?: number | null) => {
     return `${value.toFixed(2)}%`;
 };
 
-const Stats: React.FC<StatsProps> = ({ selectedPool, currentPool, chartData, className }) => {
+const Stats: React.FC<StatsProps> = ({ selectedPool, currentPool, chartData, className, chartHeight = 520 }) => {
     const selectedDapp = useDappStore((state) => state.selectedDapp);
     const sarosState = useSarosDataStore((state) => state.data);
     const isSaros = selectedDapp === 'saros';
@@ -493,7 +494,7 @@ const Stats: React.FC<StatsProps> = ({ selectedPool, currentPool, chartData, cla
 
     return (
         <Card className={`col-start-1 col-span-7 w-full ${className || ''}`}>
-            <div className="flex flex-col">
+            <div className="flex h-full flex-col">
                 {(isSaros || isDrift) && (
                     <div className="mb-4 grid grid-cols-2 gap-2 md:grid-cols-4">
                         {isSaros && sarosLoading && (
@@ -541,7 +542,7 @@ const Stats: React.FC<StatsProps> = ({ selectedPool, currentPool, chartData, cla
                     </div>
                 </div>
 
-                <div className="chart-wrapper">
+                <div className="chart-wrapper flex-1 min-h-0">
                     {isDrift ? (
                         <DriftCandlestickChart
                             key={selectedDriftMarket?.marketIndex ?? 'drift-chart'}
@@ -562,7 +563,7 @@ const Stats: React.FC<StatsProps> = ({ selectedPool, currentPool, chartData, cla
                             No liquidity data to display.
                         </div>
                     ) : (
-                        <ResponsiveContainer width="100%" height={520}>
+                        <ResponsiveContainer width="100%" height={chartHeight}>
                             <ComposedChart data={displayChartData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
                                 <XAxis

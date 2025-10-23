@@ -130,7 +130,7 @@ export const MeteoraPositionOverview = ({ pool }: MeteoraPositionOverviewProps) 
     <div className="space-y-1">
       <div className="flex items-center justify-between mb-1">
         <div>
-          <h2 className="text-xl font-bold text-primary mb-1">{pool.name}</h2>
+          <h2 className="text-xl text-primary mb-1">{pool.name}</h2>
         </div>
 
         {/* Primary stats */}
@@ -160,8 +160,8 @@ export const MeteoraPositionOverview = ({ pool }: MeteoraPositionOverviewProps) 
 
       {/* Fee Chart */}
       <div className="rounded-lg border border-border/40 bg-card p-3">
-        <MeteoraFeeChart 
-          data={feeBps} 
+        <MeteoraFeeChart
+          data={feeBps}
           isLoading={false}
           selectedPeriod={feePeriod}
           onPeriodChange={setFeePeriod}
@@ -169,8 +169,8 @@ export const MeteoraPositionOverview = ({ pool }: MeteoraPositionOverviewProps) 
       </div>
 
       {/* Volume Trend */}
-      <MeteoraVolumeChart 
-        data={volume} 
+      <MeteoraVolumeChart
+        data={volume}
         isLoading={false}
         selectedPeriod={volumePeriod}
         onPeriodChange={setVolumePeriod}
