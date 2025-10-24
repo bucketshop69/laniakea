@@ -20,11 +20,8 @@ import { useSarosDataStore } from '@/modules/saros/state';
 import { useSarosPoolMetadata } from '@/modules/saros/hooks/useFetchPoolMetadata';
 import { useSarosOverviewChart } from '@/modules/saros/hooks/useFetchOverviewChart';
 import { useSarosBinDistribution } from '@/modules/saros/hooks/useFetchBinDistribution';
-import { useDriftMarketsStore } from '@/modules/drift/state';
-import { Button } from './ui/button';
-import type { CandleResolution } from '@drift-labs/sdk';
-import { DriftCandlestickChart } from '@/modules/drift/components/DriftCandlestickChart';
 import MeteoraStats from '@/modules/meteora/components/MeteoraStats';
+import DriftStats from '@/modules/drift/components/DriftStats';
 
 interface Pool {
     pair: string;
@@ -101,26 +98,6 @@ const Stats: React.FC<StatsProps> = ({ selectedPool, currentPool, chartData, cla
         isLoading: sarosMetadataLoading,
         error: sarosMetadataError,
     } = useSarosPoolMetadata({ poolAddress: sarosPoolAddress, enabled: Boolean(sarosPoolAddress) });
-
-    const driftMarkets = useDriftMarketsStore((state) => state.markets);
-    const driftSelectedMarketIndex = useDriftMarketsStore((state) => state.selectedMarketIndex);
-    const driftSnapshots = useDriftMarketsStore((state) => state.snapshots);
-    const driftChartData = useDriftMarketsStore((state) => state.chart.data);
-    const driftChartLoading = useDriftMarketsStore((state) => state.chart.loading);
-    const driftChartError = useDriftMarketsStore((state) => state.chart.error);
-    const driftChartResolution = useDriftMarketsStore((state) => state.chart.resolution);
-    const setDriftChartResolution = useDriftMarketsStore((state) => state.setChartResolution);
-
-    const selectedDriftMarket = driftMarkets.find((m) => m.marketIndex === driftSelectedMarketIndex);
-    const selectedDriftSnapshot = driftSelectedMarketIndex !== null ? driftSnapshots[driftSelectedMarketIndex] : null;
-
-    const resolutionOptions: Array<{ label: string; value: CandleResolution }> = [
-        { label: '1m', value: '1' },
-        { label: '5m', value: '5' },
-        { label: '15m', value: '15' },
-        { label: '1h', value: '60' },
-        { label: '1D', value: 'D' },
-    ];
 
 
 
@@ -243,31 +220,16 @@ const Stats: React.FC<StatsProps> = ({ selectedPool, currentPool, chartData, cla
     const displayPool = sarosDisplayPool ?? sarosOverviewDisplay ?? currentPool;
     const displaySelectedPool = sarosDisplayPool?.pair ?? sarosOverviewDisplay?.pair ?? fallbackPoolLabel;
 
-    const driftChartTitle = selectedDriftMarket ? `${selectedDriftMarket.symbol} Price Chart` : 'Drift Market Chart';
-    const driftChartSubtitle = selectedDriftMarket ? selectedDriftMarket.fullName ?? selectedDriftMarket.baseAssetSymbol : 'Select a market';
-
-    const chartTitle = isDrift
-        ? driftChartTitle
-        : shouldUseOverviewChart
-            ? 'Protocol Liquidity Overview'
-            : 'Pool Liquidity Distribution';
-    const chartSubtitle = isDrift
-        ? driftChartSubtitle
-        : shouldUseOverviewChart
-            ? 'Saros Liquidity Chart'
-            : `${displaySelectedPool}`;
+    const chartTitle = shouldUseOverviewChart
+        ? 'Protocol Liquidity Overview'
+        : 'Pool Liquidity Distribution';
+    const chartSubtitle = shouldUseOverviewChart
+        ? 'Saros Liquidity Chart'
+        : `${displaySelectedPool}`;
 
     const activeBinId = primaryPair?.activeBin ?? null;
 
     const displayChartData = useMemo<ChartDataPoint[]>(() => {
-        if (isDrift) {
-            return driftChartData.map((candle) => ({
-                time: new Date(candle.time).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
-                price: candle.close,
-                volume: candle.volume,
-            }));
-        }
-
         if (!isSaros) {
             return chartData;
         }
@@ -311,7 +273,7 @@ const Stats: React.FC<StatsProps> = ({ selectedPool, currentPool, chartData, cla
                 isActive: activeBinId != null && point.binId === activeBinId,
             };
         });
-    }, [isDrift, driftChartData, shouldUseOverviewChart, sarosOverviewChart, binDistribution, chartData, activeBinId]);
+    }, [shouldUseOverviewChart, sarosOverviewChart, binDistribution, chartData, activeBinId]);
 
     const formatPriceAxis = (value: number) => (
         shouldUseOverviewChart
@@ -426,19 +388,13 @@ const Stats: React.FC<StatsProps> = ({ selectedPool, currentPool, chartData, cla
         return numeric > 0 ? `+${numeric}` : numeric.toString();
     };
 
-    const chartErrorMessage = isDrift
-        ? driftChartError
-        : shouldUseOverviewChart
-            ? sarosOverviewChartError
-            : binDistributionError;
-    const chartIsLoading = isDrift
-        ? driftChartLoading
-        : shouldUseOverviewChart
-            ? sarosOverviewChartLoading
-            : false;
-    const shouldShowEmptyState = isDrift
-        ? !driftChartLoading && !driftChartError && displayChartData.length === 0
-        : isSaros && !shouldUseOverviewChart && !sarosLoading && !chartErrorMessage && displayChartData.length === 0;
+    const chartErrorMessage = shouldUseOverviewChart
+        ? sarosOverviewChartError
+        : binDistributionError;
+    const chartIsLoading = shouldUseOverviewChart
+        ? sarosOverviewChartLoading
+        : false;
+    const shouldShowEmptyState = isSaros && !shouldUseOverviewChart && !sarosLoading && !chartErrorMessage && displayChartData.length === 0;
 
     const priceChangeValue = displayPool.priceChange24h ?? '—';
     const priceChangeClass = priceChangeValue.startsWith('+')
@@ -447,26 +403,15 @@ const Stats: React.FC<StatsProps> = ({ selectedPool, currentPool, chartData, cla
             ? 'text-destructive'
             : 'text-muted-foreground';
 
-    const driftPriceChangeValue = formatPercent(selectedDriftSnapshot?.change24hPct);
-    const driftPriceChangeClass = selectedDriftSnapshot?.change24hPct !== undefined && selectedDriftSnapshot.change24hPct >= 0
-        ? 'text-secondary-foreground'
-        : 'text-destructive';
-
-    const primaryStatValue = isDrift
-        ? formatCurrency(selectedDriftSnapshot?.markPrice)
-        : shouldUseOverviewChart
-            ? formatCurrency(sarosOverviewDisplay?.currentPrice ?? null)
-            : formatCurrency(displayPool.currentPrice);
-    const secondaryStatText = isDrift
-        ? `${driftPriceChangeValue} (24h)`
-        : shouldUseOverviewChart
-            ? `${sarosOverviewDisplay?.volume24h ?? '—'} (24h Volume)`
-            : `${priceChangeValue} (24h)`;
-    const secondaryStatClass = isDrift
-        ? driftPriceChangeClass
-        : shouldUseOverviewChart
-            ? 'text-muted-foreground'
-            : priceChangeClass;
+    const primaryStatValue = shouldUseOverviewChart
+        ? formatCurrency(sarosOverviewDisplay?.currentPrice ?? null)
+        : formatCurrency(displayPool.currentPrice);
+    const secondaryStatText = shouldUseOverviewChart
+        ? `${sarosOverviewDisplay?.volume24h ?? '—'} (24h Volume)`
+        : `${priceChangeValue} (24h)`;
+    const secondaryStatClass = shouldUseOverviewChart
+        ? 'text-muted-foreground'
+        : priceChangeClass;
 
     useEffect(() => {
         if (!isSaros) {
@@ -492,17 +437,22 @@ const Stats: React.FC<StatsProps> = ({ selectedPool, currentPool, chartData, cla
         );
     }
 
+    // Drift has its own complete stats component
+    if (isDrift) {
+        return <DriftStats className={className} />;
+    }
+
     return (
         <Card className={`col-start-1 col-span-7 w-full ${className || ''}`}>
             <div className="flex h-full flex-col">
-                {(isSaros || isDrift) && (
+                {isSaros && (
                     <div className="mb-4 grid grid-cols-2 gap-2 md:grid-cols-4">
-                        {isSaros && sarosLoading && (
+                        {sarosLoading && (
                             <div className="col-span-2 md:col-span-4 rounded-lg border border-dashed border-border/40 p-3 text-sm text-muted-foreground">
                                 Loading Saros statistics…
                             </div>
                         )}
-                        {isSaros && sarosError && !sarosLoading && (
+                        {sarosError && !sarosLoading && (
                             <div className="col-span-2 md:col-span-4 rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-300">
                                 Failed to load Saros statistics. {sarosError}
                             </div>
@@ -516,21 +466,6 @@ const Stats: React.FC<StatsProps> = ({ selectedPool, currentPool, chartData, cla
                             <h2 className="text-xl font-bold text-primary mb-1">{chartTitle}</h2>
                         }
                         <p className="text-sm">{chartSubtitle}</p>
-                        {isDrift && (
-                            <div className="flex gap-1 mt-2">
-                                {resolutionOptions.map((option) => (
-                                    <Button
-                                        key={option.value}
-                                        variant={driftChartResolution === option.value ? 'default' : 'outline'}
-                                        size="sm"
-                                        onClick={() => setDriftChartResolution(option.value)}
-                                        className="h-7 px-2 text-xs"
-                                    >
-                                        {option.label}
-                                    </Button>
-                                ))}
-                            </div>
-                        )}
                     </div>
                     <div className="text-right">
                         <p className="text-2xl font-bold text-primary">
@@ -543,14 +478,7 @@ const Stats: React.FC<StatsProps> = ({ selectedPool, currentPool, chartData, cla
                 </div>
 
                 <div className="chart-wrapper flex-1 min-h-0">
-                    {isDrift ? (
-                        <DriftCandlestickChart
-                            key={selectedDriftMarket?.marketIndex ?? 'drift-chart'}
-                            data={driftChartData}
-                            isLoading={driftChartLoading}
-                            marketSymbol={selectedDriftMarket?.symbol}
-                        />
-                    ) : chartIsLoading ? (
+                    {chartIsLoading ? (
                         <div className="flex h-[320px] items-center justify-center rounded-lg border border-dashed border-border/40 text-sm text-muted-foreground">
                             Loading Saros chart data…
                         </div>

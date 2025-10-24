@@ -20,17 +20,17 @@ const CANDLE_UP = '#16c47f'
 const CANDLE_DOWN = '#f85149'
 
 const candlestickColors = {
-  grid: 'var(--border)',
-  border: 'var(--border)',
-  axisText: 'var(--primary)',
-  crosshair: 'var(--primary)',
-  crosshairLabel: 'var(--card)',
+  grid: 'rgba(255, 255, 255, 0.1)',
+  border: 'rgba(255, 255, 255, 0.1)',
+  axisText: '#ffffff',
+  crosshair: '#ffffff',
+  crosshairLabel: '#1a1a1a',
   up: CANDLE_UP,
   down: CANDLE_DOWN,
   wickUp: CANDLE_UP,
   wickDown: CANDLE_DOWN,
-  markerTooltipBg: 'var(--card)',
-  markerTooltipBorder: 'var(--border)',
+  markerTooltipBg: '#1a1a1a',
+  markerTooltipBorder: 'rgba(255, 255, 255, 0.1)',
 }
 
 interface DriftCandlestickChartProps {
@@ -267,12 +267,14 @@ export const DriftCandlestickChart = ({ data, isLoading, marketSymbol }: DriftCa
             }
 
             const total = chartData.length
-            const visible = Math.min(100, total)
+            // Responsive visible range: fewer candles on mobile (more zoomed in)
+            const isMobile = window.innerWidth < 768
+            const visible = isMobile ? Math.min(60, total) : Math.min(100, total)
             const from = Math.max(0, total - visible)
             // Use logical range and extend 'to' to create a right-side gap for the last bar
             ts.setVisibleLogicalRange({ from, to: total + RIGHT_GAP_BARS })
             rangeSetRef.current = true
-            console.log('[Chart] Initial view set (logical range with right gap)')
+            console.log('[Chart] Initial view set (logical range with right gap)', { isMobile, visible })
           } catch (e) {
             ts.fitContent()
           }
@@ -382,7 +384,7 @@ export const DriftCandlestickChart = ({ data, isLoading, marketSymbol }: DriftCa
   }, [annotations, isInitialized, data])
 
   return (
-    <div ref={chartContainerRef} className="relative w-full min-h-[520px]">
+    <div ref={chartContainerRef} className="relative w-full min-h-[320px] md:min-h-[520px]">
       {(!isMounted || isLoading || data.length < MIN_BARS) && (
         <div className="absolute inset-0 flex items-center justify-center rounded-lg border border-dashed border-border/40 bg-transparent text-sm text-muted-foreground">
           {isLoading ? 'Loading chart...' : 'Initializing...'}

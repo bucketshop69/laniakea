@@ -176,16 +176,6 @@ export const MeteoraPairGroupsHeatmap = ({
           <h2 className={headerTitleClass}>Meteora Market Overview</h2>
           <p className={headerSubtitleClass}>Top Pair Groups by 24h Volume</p>
         </div>
-
-        {/* Primary stats */}
-        <div className="text-right">
-          <p className={headerValueClass}>
-            {formatNumber(protocolMetrics?.total_tvl ?? 0)}
-          </p>
-          <p className={headerVolumeClass}>
-            {formatNumber(protocolMetrics?.daily_trade_volume ?? 0)} (24h Volume)
-          </p>
-        </div>
       </div>
 
       {/* Heatmap - 3 Row Layout */}
