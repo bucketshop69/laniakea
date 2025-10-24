@@ -100,7 +100,7 @@ const MeteoraDiscover = ({ onSelect }: MeteoraDiscoverProps) => {
             )}
             {meteora.error && !meteora.isLoadingPairGroups && (
               <TableRow>
-                <TableCell colSpan={6} className="py-4 text-center text-xs text-red-400">
+                <TableCell colSpan={6} className="py-4 text-center text-xs text-destructive">
                   Failed to load pair groups. Please try again.
                 </TableCell>
               </TableRow>
@@ -171,7 +171,7 @@ const MeteoraDiscover = ({ onSelect }: MeteoraDiscoverProps) => {
                           <TableCell>
                             <div className="ml-1 border-l border-muted-foreground/30 pl-1">
                               <div className="flex items-center gap-1">
-                                <Sparkles className="h-3 w-3 text-blue" />
+                                <Sparkles className="h-3 w-3 text-secondary-foreground" />
                                 <span className="text-xs text-muted-foreground">
                                   (Bin {pool.bin_step})
                                 </span>

@@ -3,6 +3,7 @@ import type { MeteoraPool } from '../types/domain'
 import MeteoraFeeChart from './MeteoraFeeChart'
 import MeteoraVolumeChart from './MeteoraVolumeChart'
 import { useMeteoraPoolAnalytics } from '../hooks/useMeteoraPoolAnalytics'
+import { Button } from '@/components/ui/button'
 
 interface MeteoraPositionOverviewProps {
   pool: MeteoraPool
@@ -45,6 +46,7 @@ export const getMeteoraPositionHeaderData = (pool: MeteoraPool): MeteoraPosition
 export const MeteoraPositionOverview = ({ pool }: MeteoraPositionOverviewProps) => {
   const [feePeriod, setFeePeriod] = useState(1)
   const [volumePeriod, setVolumePeriod] = useState(7)
+  const [activeChart, setActiveChart] = useState<'fees' | 'volume'>('fees')
 
   const { feeBps, volume, isLoading, error } = useMeteoraPoolAnalytics({
     poolAddress: pool.address,
@@ -76,21 +78,21 @@ export const MeteoraPositionOverview = ({ pool }: MeteoraPositionOverviewProps) 
 
     // Determine signal
     let signal: 'enter' | 'wait' | 'risky' | 'avoid' = 'enter'
-    let signalColor = 'text-emerald-400'
-    let signalBg = 'bg-emerald-500/20'
+    let signalColor = 'text-secondary-foreground'
+    let signalBg = 'bg-secondary/30'
 
     if (riskScore > 7) {
       signal = 'risky'
-      signalColor = 'text-yellow-400'
-      signalBg = 'bg-yellow-500/20'
+      signalColor = 'text-secondary-foreground'
+      signalBg = 'bg-secondary/20'
     } else if (riskScore > 5 && pool.apy < 20) {
       signal = 'wait'
-      signalColor = 'text-blue-400'
-      signalBg = 'bg-blue-500/20'
+      signalColor = 'text-muted-foreground'
+      signalBg = 'bg-muted/30'
     } else if (pool.trade_volume_24h < 100_000) {
       signal = 'avoid'
-      signalColor = 'text-red-400'
-      signalBg = 'bg-red-500/20'
+      signalColor = 'text-destructive'
+      signalBg = 'bg-destructive/10'
     }
 
     return {
@@ -119,36 +121,56 @@ export const MeteoraPositionOverview = ({ pool }: MeteoraPositionOverviewProps) 
   if (error) {
     return (
       <div className="p-4">
-        <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-300">
+        <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
           Failed to load pool analytics. {error}
         </div>
       </div>
     )
   }
 
+  const feeChart = (
+    <div className="rounded-lg border border-border/40 bg-card p-3">
+      <MeteoraFeeChart
+        data={feeBps}
+        isLoading={false}
+        selectedPeriod={feePeriod}
+        onPeriodChange={setFeePeriod}
+      />
+    </div>
+  )
+
+  const volumeChart = (
+    <MeteoraVolumeChart
+      data={volume}
+      isLoading={false}
+      selectedPeriod={volumePeriod}
+      onPeriodChange={setVolumePeriod}
+    />
+  )
+
   return (
-    <div className="space-y-1">
-      <div className="flex items-center justify-between mb-1">
+    <div className="space-y-2">
+      <div className="flex items-start justify-between gap-2 mb-1">
         <div>
-          <h2 className="text-xl font-bold text-primary mb-1">{pool.name}</h2>
+          <h2 className="text-xl text-primary mb-1">{pool.name}</h2>
         </div>
 
-        {/* Primary stats */}
-        <div className="text-right">
-          <div className="grid grid-cols-3 gap-3 text-xs mt-1">
-            <div className="text-center">
+        {/* Primary stats (hidden on small screens) */}
+        <div className="hidden md:block text-right">
+          <div className="grid grid-cols-3 gap-4 text-xs mt-1">
+            <div className="text-right">
               <div className="text-muted-foreground mb-1">TVL</div>
               <div className="text-sm font-semibold text-primary">
                 {formatCurrency(parseFloat(pool.liquidity))}
               </div>
             </div>
-            <div className="text-center">
+            <div className="text-right">
               <div className="text-muted-foreground mb-1">24h Volume</div>
               <div className="text-sm font-semibold text-primary">
                 {formatCurrency(pool.trade_volume_24h)}
               </div>
             </div>
-            <div className="text-center">
+            <div className="text-right">
               <div className="text-muted-foreground mb-1">24h Fees</div>
               <div className="text-sm font-semibold text-primary">
                 {formatCurrency(pool.fees_24h)}
@@ -156,25 +178,39 @@ export const MeteoraPositionOverview = ({ pool }: MeteoraPositionOverviewProps) 
             </div>
           </div>
         </div>
+        <div className="flex items-center justify-between md:hidden">
+          <div className="flex gap-1">
+            <Button
+              type="button"
+              size="sm"
+              className="h-6 px-2 text-[10px]"
+              variant={activeChart === 'fees' ? 'default' : 'outline'}
+              onClick={() => setActiveChart('fees')}
+            >
+              Fees
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              className="h-6 px-2 text-[10px]"
+              variant={activeChart === 'volume' ? 'default' : 'outline'}
+              onClick={() => setActiveChart('volume')}
+            >
+              Volume
+            </Button>
+          </div>
+        </div>
       </div>
 
-      {/* Fee Chart */}
-      <div className="rounded-lg border border-border/40 bg-card p-3">
-        <MeteoraFeeChart 
-          data={feeBps} 
-          isLoading={false}
-          selectedPeriod={feePeriod}
-          onPeriodChange={setFeePeriod}
-        />
+
+      <div className="md:hidden space-y-2">
+        {activeChart === 'fees' ? feeChart : volumeChart}
       </div>
 
-      {/* Volume Trend */}
-      <MeteoraVolumeChart 
-        data={volume} 
-        isLoading={false}
-        selectedPeriod={volumePeriod}
-        onPeriodChange={setVolumePeriod}
-      />
+      <div className="hidden md:flex md:flex-col md:gap-2">
+        {feeChart}
+        {volumeChart}
+      </div>
     </div>
   )
 }

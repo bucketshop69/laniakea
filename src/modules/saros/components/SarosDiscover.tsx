@@ -104,7 +104,7 @@ const SarosDiscover = ({ onSelect }: SarosDiscoverProps) => {
             )}
             {saros.error && !saros.isLoading && (
               <TableRow>
-                <TableCell colSpan={5} className="py-4 text-center text-xs text-red-400">
+                <TableCell colSpan={5} className="py-4 text-center text-xs text-destructive">
                   Failed to load pools. Please try again.
                 </TableCell>
               </TableRow>
@@ -138,7 +138,7 @@ const SarosDiscover = ({ onSelect }: SarosDiscoverProps) => {
                         {multiplePairs ? (
                           isExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />
                         ) : (
-                          <Sparkles className="h-3 w-3 text-blue" />
+                          <Sparkles className="h-3 w-3 text-secondary-foreground" />
                         )}
                         <div className="flex flex-col">
                           <span className="text-sm font-medium text-primary">

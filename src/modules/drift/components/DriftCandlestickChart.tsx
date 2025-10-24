@@ -16,6 +16,23 @@ import type { DriftCandlePoint } from '../types'
 const MIN_BARS = 30
 const RIGHT_GAP_BARS = 8
 
+const CANDLE_UP = '#16c47f'
+const CANDLE_DOWN = '#f85149'
+
+const candlestickColors = {
+  grid: 'rgba(255, 255, 255, 0.1)',
+  border: 'rgba(255, 255, 255, 0.1)',
+  axisText: '#ffffff',
+  crosshair: '#ffffff',
+  crosshairLabel: '#1a1a1a',
+  up: CANDLE_UP,
+  down: CANDLE_DOWN,
+  wickUp: CANDLE_UP,
+  wickDown: CANDLE_DOWN,
+  markerTooltipBg: '#1a1a1a',
+  markerTooltipBorder: 'rgba(255, 255, 255, 0.1)',
+}
+
 interface DriftCandlestickChartProps {
   data: DriftCandlePoint[]
   isLoading: boolean
@@ -126,21 +143,22 @@ export const DriftCandlestickChart = ({ data, isLoading, marketSymbol }: DriftCa
           height,
           layout: {
             background: { type: ColorType.Solid, color: 'transparent' },
-            textColor: '#94a3b8',
+            textColor: candlestickColors.axisText,
           },
           grid: {
-            vertLines: { color: '#334155' },
-            horzLines: { color: '#334155' },
+            vertLines: { color: candlestickColors.grid },
+            horzLines: { color: candlestickColors.grid },
           },
           timeScale: {
             timeVisible: true,
             secondsVisible: false,
-            borderColor: '#334155',
+            borderColor: candlestickColors.border,
             rightOffset: 12,
             barSpacing: 8,
           },
           rightPriceScale: {
-            borderColor: '#334155',
+            borderColor: candlestickColors.border,
+            textColor: candlestickColors.axisText,
             scaleMargins: {
               top: 0.1,
               bottom: 0.1,
@@ -148,22 +166,24 @@ export const DriftCandlestickChart = ({ data, isLoading, marketSymbol }: DriftCa
           },
           crosshair: {
             horzLine: {
-              color: '#64748B',
-              labelBackgroundColor: '#1E293B',
+              color: candlestickColors.crosshair,
+              labelBackgroundColor: candlestickColors.crosshairLabel,
             },
             vertLine: {
-              color: '#64748B',
-              labelBackgroundColor: '#1E293B',
+              color: candlestickColors.crosshair,
+              labelBackgroundColor: candlestickColors.crosshairLabel,
             },
           },
         })
 
         const series = chart.addSeries(CandlestickSeries, {
-          upColor: '#10b981',
-          downColor: '#ef4444',
-          borderVisible: false,
-          wickUpColor: '#10b981',
-          wickDownColor: '#ef4444',
+          upColor: candlestickColors.up,
+          downColor: candlestickColors.down,
+          borderVisible: true,
+          borderUpColor: candlestickColors.up,
+          borderDownColor: candlestickColors.down,
+          wickUpColor: candlestickColors.wickUp,
+          wickDownColor: candlestickColors.wickDown,
         })
 
         chartRef.current = chart
@@ -247,12 +267,14 @@ export const DriftCandlestickChart = ({ data, isLoading, marketSymbol }: DriftCa
             }
 
             const total = chartData.length
-            const visible = Math.min(100, total)
+            // Responsive visible range: fewer candles on mobile (more zoomed in)
+            const isMobile = window.innerWidth < 768
+            const visible = isMobile ? Math.min(60, total) : Math.min(100, total)
             const from = Math.max(0, total - visible)
             // Use logical range and extend 'to' to create a right-side gap for the last bar
             ts.setVisibleLogicalRange({ from, to: total + RIGHT_GAP_BARS })
             rangeSetRef.current = true
-            console.log('[Chart] Initial view set (logical range with right gap)')
+            console.log('[Chart] Initial view set (logical range with right gap)', { isMobile, visible })
           } catch (e) {
             ts.fitContent()
           }
@@ -362,7 +384,7 @@ export const DriftCandlestickChart = ({ data, isLoading, marketSymbol }: DriftCa
   }, [annotations, isInitialized, data])
 
   return (
-    <div ref={chartContainerRef} className="relative w-full" style={{ minHeight: '520px' }}>
+    <div ref={chartContainerRef} className="relative w-full min-h-[320px] md:min-h-[520px]">
       {(!isMounted || isLoading || data.length < MIN_BARS) && (
         <div className="absolute inset-0 flex items-center justify-center rounded-lg border border-dashed border-border/40 bg-transparent text-sm text-muted-foreground">
           {isLoading ? 'Loading chart...' : 'Initializing...'}
@@ -377,11 +399,10 @@ export const DriftCandlestickChart = ({ data, isLoading, marketSymbol }: DriftCa
         return (
           <div
             key={marker.id}
-            className="absolute pointer-events-auto cursor-pointer z-50"
+            className="absolute z-50 -translate-x-1/2 -translate-y-full cursor-pointer pointer-events-auto"
             style={{
               left: `${marker.x}px`,
               top: `${marker.y}px`,
-              transform: 'translate(-50%, -100%)',
             }}
             onMouseEnter={() => setHoveredMarkerId(marker.id)}
             onMouseLeave={() => setHoveredMarkerId(null)}
@@ -406,23 +427,22 @@ export const DriftCandlestickChart = ({ data, isLoading, marketSymbol }: DriftCa
             {/* Tooltip */}
             {isHovered && (
               <div
-                className="absolute left-1/2 bottom-full mb-2 -translate-x-1/2 w-56 p-2 bg-slate-900 border border-slate-700 rounded shadow-xl z-[100]"
-                style={{ pointerEvents: 'none' }}
+                className="absolute left-1/2 bottom-full mb-2 w-56 -translate-x-1/2 rounded border border-border bg-card p-2 shadow-xl z-[100] pointer-events-none"
               >
-                <div className="text-xs font-semibold text-white mb-1">
+                <div className="mb-1 text-xs font-semibold text-primary">
                   {feedItem?.title || marker.note}
                 </div>
                 {feedItem?.description && (
-                  <div className="text-[10px] text-slate-300 line-clamp-2">
+                  <div className="text-[10px] text-secondary-foreground line-clamp-2">
                     {feedItem.description}
                   </div>
                 )}
-                <div className="text-[10px] text-slate-500 mt-1">
+                <div className="mt-1 text-[10px] text-muted-foreground">
                   {new Date(marker.timestamp).toLocaleString()}
                 </div>
 
                 {/* Tooltip arrow */}
-                <div className="absolute left-1/2 bottom-0 translate-y-full -translate-x-1/2 w-0 h-0 border-l-6 border-r-6 border-t-6 border-l-transparent border-r-transparent border-t-slate-900" />
+                <div className="absolute left-1/2 bottom-0 h-0 w-0 -translate-x-1/2 translate-y-full border-l-6 border-r-6 border-t-6 border-l-transparent border-r-transparent border-t-[var(--card)]" />
               </div>
             )}
           </div>

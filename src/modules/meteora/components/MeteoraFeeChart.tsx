@@ -27,6 +27,19 @@ const formatTime = (timestamp: number) => {
   return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
 }
 
+const feeChartColors = {
+  gradient: 'var(--chart-2)',
+  grid: 'var(--border)',
+  axis: 'var(--muted-foreground)',
+  stroke: 'var(--chart-1)',
+  tooltipBackground: 'var(--card)',
+  tooltipBorder: 'var(--border)',
+  tooltipMin: 'var(--destructive)',
+  tooltipMax: 'var(--chart-2)',
+  tooltipAvg: 'var(--chart-1)',
+  tooltipHighlight: 'var(--chart-4)',
+}
+
 export const MeteoraFeeChart = ({ data, isLoading, selectedPeriod, onPeriodChange }: MeteoraFeeChartProps) => {
   const periodOptions = [
     { label: '1D', value: 1 },
@@ -64,9 +77,9 @@ export const MeteoraFeeChart = ({ data, isLoading, selectedPeriod, onPeriodChang
 
   // Determine volatility level
   const getVolatilityLevel = (spike: number) => {
-    if (spike > 3) return { label: 'High', color: 'text-red-400', bgColor: 'bg-red-500/20' }
-    if (spike > 2) return { label: 'Moderate', color: 'text-yellow-400', bgColor: 'bg-yellow-500/20' }
-    return { label: 'Low', color: 'text-emerald-400', bgColor: 'bg-emerald-500/20' }
+    if (spike > 3) return { label: 'High', color: 'text-destructive', bgColor: 'bg-destructive/20' }
+    if (spike > 2) return { label: 'Moderate', color: 'text-secondary-foreground', bgColor: 'bg-secondary/40' }
+    return { label: 'Low', color: 'text-muted-foreground', bgColor: 'bg-muted/40' }
   }
 
   const volatility = getVolatilityLevel(stats.spike)
@@ -75,7 +88,7 @@ export const MeteoraFeeChart = ({ data, isLoading, selectedPeriod, onPeriodChang
 
   return (
     <div className="space-y-2 relative">
-      <div className="flex items-start justify-between">
+      <div className="hidden md:flex items-start justify-between">
         <div>
           <h3 className="text-sm font-semibold text-primary mb-2">Dynamic Fee Activity</h3>
           <div className="flex items-center gap-4 text-[10px] text-muted-foreground">
@@ -83,14 +96,14 @@ export const MeteoraFeeChart = ({ data, isLoading, selectedPeriod, onPeriodChang
               <span className="text-primary font-medium">Current:</span> {formatBps(stats.current)}
             </div>
             <div>
-              <span className="text-red-400 font-medium">Min:</span> {formatBps(stats.min)}
+              <span className="text-destructive font-medium">Min:</span> {formatBps(stats.min)}
             </div>
             <div>
-              <span className="text-emerald-400 font-medium">Max:</span> {formatBps(stats.max)}
+              <span className="text-secondary-foreground font-medium">Max:</span> {formatBps(stats.max)}
             </div>
             {stats.spike > 2 && (
               <div>
-                <span className="text-yellow-400">⚠️ {stats.spike.toFixed(1)}× spike detected</span>
+                <span className="text-secondary-foreground">⚠️ {stats.spike.toFixed(1)}× spike detected</span>
               </div>
             )}
           </div>
@@ -124,69 +137,71 @@ export const MeteoraFeeChart = ({ data, isLoading, selectedPeriod, onPeriodChang
         </div>
       ) : (
         <div className={`transition-opacity duration-200 ${isLoading ? 'opacity-40' : 'opacity-100'}`}>
-          <ResponsiveContainer width="100%" height={220}>
-        <AreaChart data={chartData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
-          <defs>
-            <linearGradient id="feeGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-              <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-            </linearGradient>
-          </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.3} />
-          <XAxis
-            dataKey="time"
-            stroke="#64748B"
-            fontSize={10}
-            tickLine={false}
-            axisLine={false}
-          />
-          <YAxis
-            stroke="#64748B"
-            fontSize={10}
-            tickLine={false}
-            axisLine={false}
-            tickFormatter={(value) => formatBps(value)}
-            domain={['dataMin', 'dataMax']}
-          />
-          <Tooltip
-            content={({ active, payload }) => {
-              if (!active || !payload || payload.length === 0) return null
+          <div className="h-[140px] md:h-[220px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+                <defs>
+                  <linearGradient id="feeGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={feeChartColors.gradient} stopOpacity={0.3} />
+                    <stop offset="95%" stopColor={feeChartColors.gradient} stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke={feeChartColors.grid} opacity={0.3} />
+                <XAxis
+                  dataKey="time"
+                  stroke={feeChartColors.axis}
+                  fontSize={10}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis
+                  stroke={feeChartColors.axis}
+                  fontSize={10}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(value) => formatBps(value)}
+                  domain={['dataMin', 'dataMax']}
+                />
+                <Tooltip
+                  content={({ active, payload }) => {
+                    if (!active || !payload || payload.length === 0) return null
 
-              const data = payload[0]?.payload as ChartPoint | undefined
-              if (!data) return null
+                    const data = payload[0]?.payload as ChartPoint | undefined
+                    if (!data) return null
 
-              return (
-                <div className="rounded-md border border-border/60 bg-slate-900/95 p-2 text-xs">
-                  <div className="font-semibold text-primary mb-1">{data.time}</div>
-                  <div className="space-y-0.5">
-                    <div className="flex justify-between gap-3">
-                      <span className="text-muted-foreground">Avg Fee:</span>
-                      <span className="text-primary font-medium">{formatBps(data.avgFee)}</span>
-                    </div>
-                    <div className="flex justify-between gap-3">
-                      <span className="text-muted-foreground">Min:</span>
-                      <span className="text-red-400">{formatBps(data.minFee)}</span>
-                    </div>
-                    <div className="flex justify-between gap-3">
-                      <span className="text-muted-foreground">Max:</span>
-                      <span className="text-emerald-400">{formatBps(data.maxFee)}</span>
-                    </div>
-                  </div>
-                </div>
-              )
-            }}
-          />
-          <Area
-            type="monotone"
-            dataKey="avgFee"
-            stroke="#3b82f6"
-            strokeWidth={2}
-            fill="url(#feeGradient)"
-            dot={false}
-            activeDot={{ r: 4, fill: '#3b82f6', stroke: '#1e293b', strokeWidth: 2 }}
-          />
-        </AreaChart>
-      </ResponsiveContainer>
+                    return (
+                      <div className="rounded-md border border-border/60 bg-card/95 p-2 text-xs">
+                        <div className="font-semibold text-primary mb-1">{data.time}</div>
+                        <div className="space-y-0.5">
+                          <div className="flex justify-between gap-3">
+                            <span className="text-muted-foreground">Avg Fee:</span>
+                            <span className="text-primary font-medium">{formatBps(data.avgFee)}</span>
+                          </div>
+                          <div className="flex justify-between gap-3">
+                            <span className="text-muted-foreground">Min:</span>
+                            <span className="text-destructive">{formatBps(data.minFee)}</span>
+                          </div>
+                          <div className="flex justify-between gap-3">
+                            <span className="text-muted-foreground">Max:</span>
+                            <span className="text-secondary-foreground">{formatBps(data.maxFee)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="avgFee"
+                  stroke={feeChartColors.stroke}
+                  strokeWidth={2}
+                  fill="url(#feeGradient)"
+                  dot={false}
+                  activeDot={{ r: 4, fill: feeChartColors.stroke, stroke: feeChartColors.tooltipHighlight, strokeWidth: 2 }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       )}
     </div>

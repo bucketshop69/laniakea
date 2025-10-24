@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Search, TrendingUp, LayoutDashboard } from 'lucide-react';
 import { Card } from '@/components/ui/card';
-import SarosActionRail, { type SarosActionDefinition } from '../../saros/components/SarosActionRail';
+import ActionRail, { type ActionDefinition } from '@/components/ui/ActionRail';
 import DriftMarketDiscovery from './DriftMarketDiscovery';
 import DriftTrade from './DriftTrade';
 import DriftOverview from './DriftOverview';
@@ -19,7 +19,7 @@ const DriftAction = () => {
     const activeAction = useDriftStore((state) => state.activeView);
     const setActiveAction = useDriftStore((state) => state.setActiveView);
 
-    const actions = useMemo<SarosActionDefinition<DriftView>[]>(
+    const actions = useMemo<ActionDefinition<DriftView>[]>(
         () => [
             { id: 'discover', icon: Search, label: 'Discover markets' },
             { id: 'trade', icon: TrendingUp, label: 'Trade' },
@@ -59,7 +59,7 @@ const DriftAction = () => {
 
     return (
         <div className="grid h-full grid-cols-12 gap-1">
-            <SarosActionRail actions={actions} activeAction={activeAction} onSelect={setActiveAction} />
+            <ActionRail actions={actions} activeAction={activeAction} onSelect={setActiveAction} />
             <div className="col-span-11 flex flex-col">{renderContent()}</div>
         </div>
     );

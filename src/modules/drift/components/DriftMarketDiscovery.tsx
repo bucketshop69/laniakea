@@ -87,7 +87,7 @@ const DriftMarketDiscovery = () => {
             )}
             {marketStatus === 'error' && (
               <TableRow>
-                <TableCell colSpan={4} className="py-4 text-center text-xs text-red-400">
+                <TableCell colSpan={4} className="py-4 text-center text-xs text-destructive">
                   {marketError ?? 'Failed to load markets. Please try again.'}
                 </TableCell>
               </TableRow>
@@ -107,7 +107,7 @@ const DriftMarketDiscovery = () => {
                   key={market.marketIndex}
                   className={cn(
                     'cursor-pointer transition-colors',
-                    isSelected && 'bg-blue/10 hover:bg-blue/15'
+                    isSelected && 'bg-card/60 hover:bg-card/80'
                   )}
                   onClick={() => handleMarketSelect(market.marketIndex)}
                 >
@@ -123,8 +123,8 @@ const DriftMarketDiscovery = () => {
                       snapshot?.change24hPct === undefined
                         ? 'text-muted-foreground'
                         : snapshot.change24hPct >= 0
-                        ? 'text-emerald-400'
-                        : 'text-red-400'
+                        ? 'text-secondary-foreground'
+                        : 'text-destructive'
                     )}
                   >
                     {formatPercent(snapshot?.change24hPct)}

@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { MeteoraPairGroup } from '../types/domain'
 import { useMeteoraProtocolMetrics } from '../hooks/useMeteoraProtocolMetrics'
 
@@ -16,6 +16,7 @@ interface MeteoraPairGroupsHeatmapProps {
   pairGroups: MeteoraPairGroup[]
   metric?: 'tvl' | 'volume'
   onCardClick?: (pairGroup: MeteoraPairGroup) => void
+  variant?: 'default' | 'compact'
 }
 
 const formatNumber = (value: number): string => {
@@ -31,11 +32,57 @@ const formatPercent = (value: number): string => {
   return `${value.toFixed(2)}%`
 }
 
+const CARD_BASE_CLASS = 'rounded-lg cursor-pointer transition-all duration-200 hover:opacity-90 hover:scale-[1.02] border border-border/40 bg-card/40 hover:border-border'
+
+const STACKED_CARD_HEIGHTS = ['min-h-[28px]', 'min-h-[22px]', 'min-h-[18px]']
+
 export const MeteoraPairGroupsHeatmap = ({
   pairGroups,
   metric = 'volume',
   onCardClick,
+  variant,
 }: MeteoraPairGroupsHeatmapProps) => {
+  const [autoCompact, setAutoCompact] = useState(false)
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return
+
+    const query = window.matchMedia('(max-width: 768px)')
+    const updateMatches = () => setAutoCompact(query.matches)
+    const listener = (event: MediaQueryListEvent) => setAutoCompact(event.matches)
+
+    updateMatches()
+
+    if (typeof query.addEventListener === 'function') {
+      query.addEventListener('change', listener)
+      return () => {
+        query.removeEventListener('change', listener)
+      }
+    }
+
+    if (typeof query.addListener === 'function') {
+      const legacyListener = function (this: MediaQueryList, ev: MediaQueryListEvent) {
+        setAutoCompact(ev.matches)
+      }
+      query.addListener(legacyListener)
+      return () => {
+        query.removeListener(legacyListener)
+      }
+    }
+
+    // Fallback cleanup
+    return undefined
+  }, [])
+
+  const effectiveVariant = variant ?? (autoCompact ? 'compact' : 'default')
+  const isCompact = effectiveVariant === 'compact'
+
+  console.log('[MeteoraPairGroupsHeatmap] variant', {
+    passed: variant,
+    autoCompact,
+    effectiveVariant,
+  })
+
   // Fetch protocol metrics
   const {
     data: protocolMetrics,
@@ -94,53 +141,71 @@ export const MeteoraPairGroupsHeatmap = ({
     )
   }
 
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-primary mb-1">Meteora Market Overview</h2>
-          <p className="text-sm text-muted-foreground">Top Pair Groups by 24h Volume</p>
-        </div>
+  const baseSpacingClass = isCompact ? 'space-y-3' : 'space-y-6'
+  const headerTitleClass = isCompact ? 'text-base font-semibold text-primary leading-tight' : 'text-xl text-primary mb-1'
+  const headerSubtitleClass = isCompact ? 'text-[11px] text-muted-foreground leading-tight' : 'text-sm text-muted-foreground'
+  const headerValueClass = isCompact ? 'text-lg text-primary leading-tight' : 'text-2xl text-primary'
+  const headerVolumeClass = isCompact ? 'text-[11px] text-secondary-foreground leading-tight' : 'text-sm text-secondary-foreground'
+  const heatmapSpacingClass = isCompact ? 'space-y-0.5' : 'space-y-1'
+  const gridGapClass = isCompact ? 'gap-0.5' : 'gap-1'
+  const topCardNameClass = isCompact ? 'text-[11px] font-semibold text-primary truncate' : 'text-sm font-semibold text-primary'
+  const topCardValueClass = isCompact ? 'text-base font-semibold text-primary' : 'text-2xl font-bold text-primary'
+  const topCardLabelClass = isCompact ? 'text-[10px] text-muted-foreground' : 'text-xs text-muted-foreground'
+  const topCardMetaValueClass = isCompact ? 'text-[10px] text-primary font-medium' : 'text-xs text-primary font-medium'
+  const topCardMetaApyClass = isCompact ? 'text-[10px] text-secondary-foreground font-medium' : 'text-xs text-secondary-foreground font-medium'
+  const sectionPaddingClass = isCompact ? 'p-1' : 'p-1'
+  const sectionMinHeightLarge = isCompact ? 'min-h-[60px]' : 'min-h-[70px]'
+  const sectionMinHeightMedium = isCompact ? 'min-h-[46px]' : 'min-h-[50px]'
+  const sectionMinHeightSmall = isCompact ? 'min-h-[42px]' : 'min-h-[45px]'
+  const stackedHeights = isCompact ? ['min-h-[26px]', 'min-h-[24px]', 'min-h-[22px]'] : STACKED_CARD_HEIGHTS
+  const stackedNameClass = isCompact ? 'text-[10px] font-semibold text-primary leading-tight truncate' : 'text-xs font-semibold text-primary'
+  const stackedValueClass = isCompact ? 'text-sm font-bold text-primary leading-tight' : 'text-lg font-bold text-primary'
+  const stackedMetaLabelClass = isCompact ? 'text-[9px] text-muted-foreground' : 'text-[10px] text-muted-foreground'
+  const stackedMetaValueClass = isCompact ? 'text-[9px] text-secondary-foreground font-medium' : 'text-[10px] text-secondary-foreground'
+  const stackedColumnSpacing = isCompact ? 'space-y-0.5' : 'space-y-1'
+  const stackedPaddingClass = isCompact ? 'p-2' : 'p-3'
+  const dividerPadding = isCompact ? 'pt-1.5' : 'pt-3'
+  const topCardHeaderClass = isCompact ? 'flex items-start justify-between gap-1' : 'flex flex-col gap-1'
+  const stackedHeaderClass = isCompact ? 'flex items-start justify-between gap-1' : 'flex flex-col gap-0.5'
 
-        {/* Primary stats */}
-        <div className="text-right">
-          <p className="text-2xl font-bold text-primary">
-            {formatNumber(protocolMetrics?.total_tvl ?? 0)}
-          </p>
-          <p className="text-sm text-emerald-400">
-            {formatNumber(protocolMetrics?.daily_trade_volume ?? 0)} (24h Volume)
-          </p>
+  return (
+    <div className={baseSpacingClass}>
+      {/* Header */}
+      <div className="flex items-start justify-between">
+        <div>
+          <h2 className={headerTitleClass}>Meteora Market Overview</h2>
+          <p className={headerSubtitleClass}>Top Pair Groups by 24h Volume</p>
         </div>
       </div>
 
       {/* Heatmap - 3 Row Layout */}
-      <div className="space-y-1">
+      <div className={heatmapSpacingClass}>
         {/* Row 1: 60% + 40% */}
-        <div className="grid grid-cols-10 gap-1">
+        <div className={`grid grid-cols-10 ${gridGapClass}`}>
           {cards[0] && (
             <div
               key={cards[0].name}
-              className="col-span-6 p-1 rounded-lg cursor-pointer transition-all duration-200 hover:opacity-90 hover:scale-[1.02] bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/20 hover:border-blue-500/40"
-              style={{ minHeight: '50px' }}
+              className={`col-span-6 ${sectionPaddingClass} ${sectionMinHeightMedium} ${CARD_BASE_CLASS}`}
               onClick={() => onCardClick?.(cards[0].originalGroup)}
             >
               <div className="flex flex-col h-full">
-                <div className="mb-3">
-                  <div className="text-sm font-semibold text-primary mb-2">{cards[0].name}</div>
-                  <div className="text-2xl font-bold text-primary mb-1">{formatNumber(cards[0].value)}</div>
-                  <div className="text-xs text-muted-foreground">24h Volume</div>
+                <div className={isCompact ? 'mb-1.5' : 'mb-3'}>
+                  <div className={topCardHeaderClass}>
+                    <span className={topCardNameClass}>{cards[0].name}</span>
+                    <span className={topCardValueClass}>{formatNumber(cards[0].value)}</span>
+                  </div>
+                  <div className={topCardLabelClass}>24h Volume</div>
                 </div>
                 <div className="flex-1" />
-                <div className="space-y-1 pt-1 border-t border-border/20">
+                <div className={`space-y-1 pt-1 border-t border-border/20`}>
                   <div className="flex justify-between items-center">
-                    <span className="text-xs text-muted-foreground">Pools</span>
-                    <span className="text-xs text-primary font-medium">{cards[0].poolCount}</span>
+                    <span className={topCardLabelClass}>Pools</span>
+                    <span className={topCardMetaValueClass}>{cards[0].poolCount}</span>
                   </div>
                   {cards[0].farmApy > 0 && (
                     <div className="flex justify-between items-center">
-                      <span className="text-xs text-muted-foreground">Max APY</span>
-                      <span className="text-xs text-emerald-400 font-medium">{formatPercent(cards[0].farmApy)}</span>
+                      <span className={topCardLabelClass}>Max APY</span>
+                      <span className={topCardMetaApyClass}>{formatPercent(cards[0].farmApy)}</span>
                     </div>
                   )}
                 </div>
@@ -150,26 +215,27 @@ export const MeteoraPairGroupsHeatmap = ({
           {cards[1] && (
             <div
               key={cards[1].name}
-              className="col-span-4 p-1 rounded-lg cursor-pointer transition-all duration-200 hover:opacity-90 hover:scale-[1.02] bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/20 hover:border-blue-500/40"
-              style={{ minHeight: '50px' }}
+              className={`col-span-4 ${sectionPaddingClass} ${sectionMinHeightMedium} ${CARD_BASE_CLASS}`}
               onClick={() => onCardClick?.(cards[1].originalGroup)}
             >
               <div className="flex flex-col h-full">
-                <div className="mb-3">
-                  <div className="text-sm font-semibold text-primary mb-2">{cards[1].name}</div>
-                  <div className="text-2xl font-bold text-primary mb-1">{formatNumber(cards[1].value)}</div>
-                  <div className="text-xs text-muted-foreground">24h Volume</div>
+                <div className={isCompact ? 'mb-1.5' : 'mb-3'}>
+                  <div className={topCardHeaderClass}>
+                    <span className={topCardNameClass}>{cards[1].name}</span>
+                    <span className={topCardValueClass}>{formatNumber(cards[1].value)}</span>
+                  </div>
+                  <div className={topCardLabelClass}>24h Volume</div>
                 </div>
                 <div className="flex-1" />
-                <div className="space-y-1 pt-3 border-t border-border/20">
+                <div className={`space-y-1 ${dividerPadding} border-t border-border/20`}>
                   <div className="flex justify-between items-center">
-                    <span className="text-xs text-muted-foreground">Pools</span>
-                    <span className="text-xs text-primary font-medium">{cards[1].poolCount}</span>
+                    <span className={topCardLabelClass}>Pools</span>
+                    <span className={topCardMetaValueClass}>{cards[1].poolCount}</span>
                   </div>
                   {cards[1].farmApy > 0 && (
                     <div className="flex justify-between items-center">
-                      <span className="text-xs text-muted-foreground">Max APY</span>
-                      <span className="text-xs text-emerald-400 font-medium">{formatPercent(cards[1].farmApy)}</span>
+                      <span className={topCardLabelClass}>Max APY</span>
+                      <span className={topCardMetaApyClass}>{formatPercent(cards[1].farmApy)}</span>
                     </div>
                   )}
                 </div>
@@ -179,30 +245,31 @@ export const MeteoraPairGroupsHeatmap = ({
         </div>
 
         {/* Row 2: 40% + 30% + 30% */}
-        <div className="grid grid-cols-10 gap-1">
+        <div className={`grid grid-cols-10 ${gridGapClass}`}>
           {cards[2] && (
             <div
               key={cards[2].name}
-              className="col-span-4 p-1 rounded-lg cursor-pointer transition-all duration-200 hover:opacity-90 hover:scale-[1.02] bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/20 hover:border-blue-500/40"
-              style={{ minHeight: '45px' }}
+              className={`col-span-4 ${sectionPaddingClass} ${sectionMinHeightSmall} ${CARD_BASE_CLASS}`}
               onClick={() => onCardClick?.(cards[2].originalGroup)}
             >
               <div className="flex flex-col h-full">
-                <div className="mb-3">
-                  <div className="text-sm font-semibold text-primary mb-2">{cards[2].name}</div>
-                  <div className="text-2xl font-bold text-primary mb-1">{formatNumber(cards[2].value)}</div>
-                  <div className="text-xs text-muted-foreground">24h Volume</div>
+                <div className={isCompact ? 'mb-1.5' : 'mb-3'}>
+                  <div className={topCardHeaderClass}>
+                    <span className={topCardNameClass}>{cards[2].name}</span>
+                    <span className={topCardValueClass}>{formatNumber(cards[2].value)}</span>
+                  </div>
+                  <div className={topCardLabelClass}>24h Volume</div>
                 </div>
                 <div className="flex-1" />
-                <div className="space-y-1 pt-3 border-t border-border/20">
+                <div className={`space-y-1 ${dividerPadding} border-t border-border/20`}>
                   <div className="flex justify-between items-center">
-                    <span className="text-xs text-muted-foreground">Pools</span>
-                    <span className="text-xs text-primary font-medium">{cards[2].poolCount}</span>
+                    <span className={topCardLabelClass}>Pools</span>
+                    <span className={topCardMetaValueClass}>{cards[2].poolCount}</span>
                   </div>
                   {cards[2].farmApy > 0 && (
                     <div className="flex justify-between items-center">
-                      <span className="text-xs text-muted-foreground">Max APY</span>
-                      <span className="text-xs text-emerald-400 font-medium">{formatPercent(cards[2].farmApy)}</span>
+                      <span className={topCardLabelClass}>Max APY</span>
+                      <span className={topCardMetaApyClass}>{formatPercent(cards[2].farmApy)}</span>
                     </div>
                   )}
                 </div>
@@ -212,26 +279,27 @@ export const MeteoraPairGroupsHeatmap = ({
           {cards[3] && (
             <div
               key={cards[3].name}
-              className="col-span-3 p-1 rounded-lg cursor-pointer transition-all duration-200 hover:opacity-90 hover:scale-[1.02] bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/20 hover:border-blue-500/40"
-              style={{ minHeight: '45px' }}
+              className={`col-span-3 ${sectionPaddingClass} ${sectionMinHeightSmall} ${CARD_BASE_CLASS}`}
               onClick={() => onCardClick?.(cards[3].originalGroup)}
             >
               <div className="flex flex-col h-full">
-                <div className="mb-3">
-                  <div className="text-sm font-semibold text-primary mb-2">{cards[3].name}</div>
-                  <div className="text-2xl font-bold text-primary mb-1">{formatNumber(cards[3].value)}</div>
-                  <div className="text-xs text-muted-foreground">24h Volume</div>
+                <div className={isCompact ? 'mb-1.5' : 'mb-3'}>
+                  <div className={topCardHeaderClass}>
+                    <span className={topCardNameClass}>{cards[3].name}</span>
+                    <span className={topCardValueClass}>{formatNumber(cards[3].value)}</span>
+                  </div>
+                  <div className={topCardLabelClass}>24h Volume</div>
                 </div>
                 <div className="flex-1" />
-                <div className="space-y-1 pt-3 border-t border-border/20">
+                <div className={`space-y-1 ${dividerPadding} border-t border-border/20`}>
                   <div className="flex justify-between items-center">
-                    <span className="text-xs text-muted-foreground">Pools</span>
-                    <span className="text-xs text-primary font-medium">{cards[3].poolCount}</span>
+                    <span className={topCardLabelClass}>Pools</span>
+                    <span className={topCardMetaValueClass}>{cards[3].poolCount}</span>
                   </div>
                   {cards[3].farmApy > 0 && (
                     <div className="flex justify-between items-center">
-                      <span className="text-xs text-muted-foreground">Max APY</span>
-                      <span className="text-xs text-emerald-400 font-medium">{formatPercent(cards[3].farmApy)}</span>
+                      <span className={topCardLabelClass}>Max APY</span>
+                      <span className={topCardMetaApyClass}>{formatPercent(cards[3].farmApy)}</span>
                     </div>
                   )}
                 </div>
@@ -241,26 +309,27 @@ export const MeteoraPairGroupsHeatmap = ({
           {cards[4] && (
             <div
               key={cards[4].name}
-              className="col-span-3 p-1 rounded-lg cursor-pointer transition-all duration-200 hover:opacity-90 hover:scale-[1.02] bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/20 hover:border-blue-500/40"
-              style={{ minHeight: '45px' }}
+              className={`col-span-3 ${sectionPaddingClass} ${sectionMinHeightSmall} ${CARD_BASE_CLASS}`}
               onClick={() => onCardClick?.(cards[4].originalGroup)}
             >
               <div className="flex flex-col h-full">
-                <div className="mb-3">
-                  <div className="text-sm font-semibold text-primary mb-2">{cards[4].name}</div>
-                  <div className="text-2xl font-bold text-primary mb-1">{formatNumber(cards[4].value)}</div>
-                  <div className="text-xs text-muted-foreground">24h Volume</div>
+                <div className={isCompact ? 'mb-1.5' : 'mb-3'}>
+                  <div className={topCardHeaderClass}>
+                    <span className={topCardNameClass}>{cards[4].name}</span>
+                    <span className={topCardValueClass}>{formatNumber(cards[4].value)}</span>
+                  </div>
+                  <div className={topCardLabelClass}>24h Volume</div>
                 </div>
                 <div className="flex-1" />
-                <div className="space-y-1 pt-3 border-t border-border/20">
+                <div className={`space-y-1 ${dividerPadding} border-t border-border/20`}>
                   <div className="flex justify-between items-center">
-                    <span className="text-xs text-muted-foreground">Pools</span>
-                    <span className="text-xs text-primary font-medium">{cards[4].poolCount}</span>
+                    <span className={topCardLabelClass}>Pools</span>
+                    <span className={topCardMetaValueClass}>{cards[4].poolCount}</span>
                   </div>
                   {cards[4].farmApy > 0 && (
                     <div className="flex justify-between items-center">
-                      <span className="text-xs text-muted-foreground">Max APY</span>
-                      <span className="text-xs text-emerald-400 font-medium">{formatPercent(cards[4].farmApy)}</span>
+                      <span className={topCardLabelClass}>Max APY</span>
+                      <span className={topCardMetaApyClass}>{formatPercent(cards[4].farmApy)}</span>
                     </div>
                   )}
                 </div>
@@ -270,31 +339,32 @@ export const MeteoraPairGroupsHeatmap = ({
         </div>
 
         {/* Row 3: Large + Stacked Column + Stacked Column */}
-        <div className="grid grid-cols-10 gap-1">
+        <div className={`grid grid-cols-10 ${gridGapClass}`}>
           {/* Large card #6 */}
           {cards[5] && (
             <div
               key={cards[5].name}
-              className="col-span-4 p-1 rounded-lg cursor-pointer transition-all duration-200 hover:opacity-90 hover:scale-[1.02] bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/20 hover:border-blue-500/40"
-              style={{ minHeight: '70px' }}
+              className={`col-span-4 ${sectionPaddingClass} ${sectionMinHeightLarge} ${CARD_BASE_CLASS}`}
               onClick={() => onCardClick?.(cards[5].originalGroup)}
             >
               <div className="flex flex-col h-full">
-                <div className="mb-3">
-                  <div className="text-sm font-semibold text-primary mb-2">{cards[5].name}</div>
-                  <div className="text-2xl font-bold text-primary mb-1">{formatNumber(cards[5].value)}</div>
-                  <div className="text-xs text-muted-foreground">24h Volume</div>
+                <div className={isCompact ? 'mb-1.5' : 'mb-3'}>
+                  <div className={topCardHeaderClass}>
+                    <span className={topCardNameClass}>{cards[5].name}</span>
+                    <span className={topCardValueClass}>{formatNumber(cards[5].value)}</span>
+                  </div>
+                  <div className={topCardLabelClass}>24h Volume</div>
                 </div>
                 <div className="flex-1" />
-                <div className="space-y-1 pt-3 border-t border-border/20">
+                <div className={`space-y-1 ${dividerPadding} border-t border-border/20`}>
                   <div className="flex justify-between items-center">
-                    <span className="text-xs text-muted-foreground">Pools</span>
-                    <span className="text-xs text-primary font-medium">{cards[5].poolCount}</span>
+                    <span className={topCardLabelClass}>Pools</span>
+                    <span className={topCardMetaValueClass}>{cards[5].poolCount}</span>
                   </div>
                   {cards[5].farmApy > 0 && (
                     <div className="flex justify-between items-center">
-                      <span className="text-xs text-muted-foreground">Max APY</span>
-                      <span className="text-xs text-emerald-400 font-medium">{formatPercent(cards[5].farmApy)}</span>
+                      <span className={topCardLabelClass}>Max APY</span>
+                      <span className={topCardMetaApyClass}>{formatPercent(cards[5].farmApy)}</span>
                     </div>
                   )}
                 </div>
@@ -303,38 +373,40 @@ export const MeteoraPairGroupsHeatmap = ({
           )}
 
           {/* Column 2: Cards 7, 8, 9 stacked */}
-          <div className="col-span-3 space-y-1">
+          <div className={`col-span-3 ${stackedColumnSpacing}`}>
             {[cards[6], cards[7], cards[8]].map((card, idx) => card && (
               <div
                 key={card.name}
-                className="p-3 rounded-lg cursor-pointer transition-all duration-200 hover:opacity-90 hover:scale-[1.02] bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/20 hover:border-blue-500/40"
-                style={{ minHeight: idx === 0 ? '28px' : idx === 1 ? '22px' : '18px' }}
+                className={`${stackedPaddingClass} ${CARD_BASE_CLASS} ${stackedHeights[idx] ?? stackedHeights[stackedHeights.length - 1]}`}
                 onClick={() => onCardClick?.(card.originalGroup)}
               >
-                <div className="text-xs font-semibold text-primary mb-1">{card.name}</div>
-                <div className="text-lg font-bold text-primary mb-1">{formatNumber(card.value)}</div>
-                <div className="text-[10px] text-muted-foreground flex justify-between">
+                <div className={stackedHeaderClass}>
+                  <span className={stackedNameClass}>{card.name}</span>
+                  <span className={stackedValueClass}>{formatNumber(card.value)}</span>
+                </div>
+                <div className={`${stackedMetaLabelClass} flex justify-between`}>
                   <span>{card.poolCount} pools</span>
-                  {card.farmApy > 0 && <span className="text-emerald-400">{formatPercent(card.farmApy)}</span>}
+                  {card.farmApy > 0 && <span className={stackedMetaValueClass}>{formatPercent(card.farmApy)}</span>}
                 </div>
               </div>
             ))}
           </div>
 
           {/* Column 3: Cards 10, 11, 12 stacked */}
-          <div className="col-span-3 space-y-1">
+          <div className={`col-span-3 ${stackedColumnSpacing}`}>
             {[cards[9], cards[10], cards[11]].map((card, idx) => card && (
               <div
                 key={card.name}
-                className="p-3 rounded-lg cursor-pointer transition-all duration-200 hover:opacity-90 hover:scale-[1.02] bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/20 hover:border-blue-500/40"
-                style={{ minHeight: idx === 0 ? '28px' : idx === 1 ? '22px' : '18px' }}
+                className={`${stackedPaddingClass} ${CARD_BASE_CLASS} ${stackedHeights[idx] ?? stackedHeights[stackedHeights.length - 1]}`}
                 onClick={() => onCardClick?.(card.originalGroup)}
               >
-                <div className="text-xs font-semibold text-primary mb-1">{card.name}</div>
-                <div className="text-lg font-bold text-primary mb-1">{formatNumber(card.value)}</div>
-                <div className="text-[10px] text-muted-foreground flex justify-between">
+                <div className={stackedHeaderClass}>
+                  <span className={stackedNameClass}>{card.name}</span>
+                  <span className={stackedValueClass}>{formatNumber(card.value)}</span>
+                </div>
+                <div className={`${stackedMetaLabelClass} flex justify-between`}>
                   <span>{card.poolCount} pools</span>
-                  {card.farmApy > 0 && <span className="text-emerald-400">{formatPercent(card.farmApy)}</span>}
+                  {card.farmApy > 0 && <span className={stackedMetaValueClass}>{formatPercent(card.farmApy)}</span>}
                 </div>
               </div>
             ))}

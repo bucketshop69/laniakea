@@ -34,10 +34,10 @@ export const ToastContainer = ({ toasts }: { toasts: Toast[] }) => {
           key={toast.id}
           className={cn(
             'rounded-lg border px-4 py-3 text-sm shadow-lg animate-in slide-in-from-right duration-300',
-            toast.type === 'success' && 'border-emerald-500/50 bg-emerald-500/10 text-emerald-400',
-            toast.type === 'error' && 'border-red-500/50 bg-red-500/10 text-red-400',
-            toast.type === 'info' && 'border-blue-500/50 bg-blue-500/10 text-blue-400',
-            toast.type === 'warning' && 'border-amber-500/50 bg-amber-500/10 text-amber-400'
+            toast.type === 'success' && 'border-secondary-foreground/60 bg-secondary/40 text-secondary-foreground',
+            toast.type === 'error' && 'border-destructive/60 bg-destructive/10 text-destructive',
+            toast.type === 'info' && 'border-accent/60 bg-accent/20 text-secondary-foreground',
+            toast.type === 'warning' && 'border-muted-foreground/60 bg-muted/40 text-muted-foreground'
           )}
         >
           {toast.message}

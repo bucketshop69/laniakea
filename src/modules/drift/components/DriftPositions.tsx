@@ -41,9 +41,9 @@ const ToastContainer = ({ toasts }: { toasts: Toast[] }) => {
           key={toast.id}
           className={cn(
             'rounded-lg border px-4 py-3 text-sm shadow-lg',
-            toast.type === 'success' && 'border-emerald-500/50 bg-emerald-500/10 text-emerald-400',
-            toast.type === 'error' && 'border-red-500/50 bg-red-500/10 text-red-400',
-            toast.type === 'info' && 'border-blue-500/50 bg-blue-500/10 text-blue-400'
+            toast.type === 'success' && 'border-secondary-foreground/60 bg-secondary/40 text-secondary-foreground',
+            toast.type === 'error' && 'border-destructive/60 bg-destructive/10 text-destructive',
+            toast.type === 'info' && 'border-accent/60 bg-accent/20 text-muted-foreground'
           )}
         >
           {toast.message}
@@ -76,7 +76,7 @@ const ConfirmCloseDialog = ({
 
   const notional = typeof markPrice === 'number' ? markPrice * position.baseSize : null
   const pnl = position.unrealizedPnl ?? 0
-  const pnlClass = pnl >= 0 ? 'text-emerald-400' : 'text-red-400'
+  const pnlClass = pnl >= 0 ? 'text-secondary-foreground' : 'text-destructive'
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -98,7 +98,7 @@ const ConfirmCloseDialog = ({
               <span
                 className={cn(
                   'rounded px-2 py-0.5 text-[10px] font-semibold uppercase',
-                  position.side === 'long' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'
+                  position.side === 'long' ? 'bg-secondary/40 text-secondary-foreground' : 'bg-destructive/10 text-destructive'
                 )}
               >
                 {position.side}
@@ -375,8 +375,8 @@ const DriftPositions = ({ marketIndex }: DriftPositionsProps) => {
         const markPrice = snapshot?.markPrice ?? null
         const pnl = position.unrealizedPnl ?? 0
         const funding = position.fundingPnl ?? 0
-        const pnlClass = pnl >= 0 ? 'text-emerald-400' : 'text-red-400'
-        const fundingClass = funding >= 0 ? 'text-emerald-400' : 'text-red-400'
+        const pnlClass = pnl >= 0 ? 'text-secondary-foreground' : 'text-destructive'
+        const fundingClass = funding >= 0 ? 'text-secondary-foreground' : 'text-destructive'
         const notional = typeof markPrice === 'number' ? markPrice * position.baseSize : null
 
         return (
@@ -385,8 +385,8 @@ const DriftPositions = ({ marketIndex }: DriftPositionsProps) => {
             className={cn(
               'border px-1 py-1 text-xs shadow-sm',
               position.side === 'long'
-                ? 'border-emerald-500/30 bg-emerald-500/5'
-                : 'border-red-500/30 bg-red-500/5'
+                ? 'border-secondary/40 bg-secondary/20'
+                : 'border-destructive/40 bg-destructive/10'
             )}
           >
             <div className="flex items-center gap-2 text-[11px] font-semibold">
@@ -394,7 +394,7 @@ const DriftPositions = ({ marketIndex }: DriftPositionsProps) => {
               <span
                 className={cn(
                   'rounded px-1 py-px text-[10px] font-semibold uppercase',
-                  position.side === 'long' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'
+                  position.side === 'long' ? 'bg-secondary/40 text-secondary-foreground' : 'bg-destructive/10 text-destructive'
                 )}
               >
                 {position.side}

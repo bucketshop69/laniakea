@@ -14,6 +14,8 @@ import { useSarosDataStore } from '@/modules/saros/state';
 import { useMeteoraDataStore } from '@/modules/meteora/state';
 import { WalletButton } from './WalletButton';
 import { FeedPanel } from '@/modules/feed/components';
+import { ProfilePanel } from '@/modules/profile';
+import Stats from '@/components/Stats';
 
 interface Pool {
     pair: string;
@@ -58,6 +60,16 @@ interface NewsItem {
     date?: string;
 }
 
+interface ChartDataPoint {
+    time: string;
+    price: number;
+    volume: number;
+    reserveBase?: number;
+    reserveQuote?: number;
+    binId?: number;
+    isActive?: boolean;
+}
+
 interface ActionPanelProps {
     selectedPool: string;
     onSelectedPoolChange: (pool: string) => void;
@@ -65,6 +77,8 @@ interface ActionPanelProps {
     portfolioData: PortfolioData;
     positions: Position[];
     newsItems: NewsItem[];
+    currentPool: Pool;
+    chartData: ChartDataPoint[];
 }
 
 const ActionPanel: React.FC<ActionPanelProps> = ({
@@ -74,6 +88,8 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
     portfolioData,
     positions,
     newsItems,
+    currentPool,
+    chartData,
 }) => {
     const [mainTab, setMainTab] = useState('manage');
     const [manageSubTab, setManageSubTab] = useState('add');
@@ -91,7 +107,6 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
         { id: 'saros', name: 'Saros', iconSrc: '/saros/SAROS_Mark_Purple.png' },
     ];
 
-    const currentPool = pools.find(p => p.pair === selectedPool) || pools[0];
     const handleDappSelection = (id: string) => {
         setSelectedDapp(id as SupportedDapp);
         setMainTab('manage');
@@ -126,7 +141,15 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
                             <User size={16} className="mr-1" />Profile</TabsTrigger>
                         <TabsTrigger value="feed" className="flex-1 data-[state=active]:bg-transparent data-[state=active]:text-primary"><Rss size={16} className="mr-1" />Feed</TabsTrigger>
                     </TabsList>
-
+                    <div className="md:hidden mx-1 mt-2 h-[25vh] overflow-hidden">
+                        <Stats
+                            selectedPool={selectedPool}
+                            currentPool={currentPool}
+                            chartData={chartData}
+                            className="h-full"
+                            chartHeight="100%"
+                        />
+                    </div>
                     <TabsContent value="manage" className="flex-1 px-1">
                         {selectedDapp === 'saros' ? (
                             <SarosAction />
@@ -143,7 +166,7 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
                                     </label>
                                     <Select value={selectedPool} onValueChange={onSelectedPoolChange}>
                                         <SelectTrigger className="w-full px-3 py-3 text-primary text-left flex items-center 
-                                justify-between hover:border-blue transition-all duration-300">
+                                justify-between hover:border-primary transition-all duration-300">
                                             <span className="text-sm ml-2">
                                                 {currentPool.apy} APY
                                             </span>
@@ -163,7 +186,7 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
                                                                 TVL: {pool.tvl} • Fee: {pool.fee}
                                                             </div>
                                                         </div>
-                                                        <span className="text-blue text-sm font-medium">{pool.apy}</span>
+                                                        <span className="text-secondary-foreground text-sm font-medium">{pool.apy}</span>
                                                     </div>
                                                 </SelectItem>
                                             ))}
@@ -218,7 +241,7 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
                                                 </div>
                                                 <div className="flex justify-between text-sm">
                                                     <span className="">Pool Share</span>
-                                                    <span className="text-blue">{addAmount ? (parseFloat(addAmount) * 0.01).toFixed(2) : '0.00'}%</span>
+                                                    <span className="text-secondary-foreground">{addAmount ? (parseFloat(addAmount) * 0.01).toFixed(2) : '0.00'}%</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -235,23 +258,23 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
 
                                         {showSimulation && addAmount && parseFloat(addAmount) > 0 && (
                                             <div className="-dark p-1 space-y-2">
-                                                <p className="text-purple text-xs font-medium mb-2">Strategy Simulation</p>
+                                                <p className="text-secondary-foreground text-xs font-medium mb-2">Strategy Simulation</p>
                                                 <div className="space-y-1 text-xs">
                                                     <div className="flex justify-between">
                                                         <span className="">Projected APY</span>
-                                                        <span className="text-blue">{currentPool.apy}</span>
+                                                        <span className="text-secondary-foreground">{currentPool.apy}</span>
                                                     </div>
                                                     <div className="flex justify-between">
                                                         <span className="">IL Risk (30d)</span>
-                                                        <span className="text-yellow-400">2.3%</span>
+                                                        <span className="text-muted-foreground">2.3%</span>
                                                     </div>
                                                     <div className="flex justify-between">
                                                         <span className="">Expected Return (30d)</span>
-                                                        <span className="text-blue">+${(parseFloat(addAmount) * 0.02).toFixed(0)}</span>
+                                                        <span className="text-secondary-foreground">+${(parseFloat(addAmount) * 0.02).toFixed(0)}</span>
                                                     </div>
                                                     <div className="flex justify-between">
                                                         <span className="">Max Drawdown</span>
-                                                        <span className="text-red-400">-5.1%</span>
+                                                        <span className="text-destructive">-5.1%</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -285,7 +308,7 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
                                         </div>
 
                                         <div className="-dark p-1">
-                                            <p className="text-purple text-xs mb-2 font-medium">You will receive</p>
+                                            <p className="text-secondary-foreground text-xs mb-2 font-medium">You will receive</p>
                                             <div className="space-y-1">
                                                 <div className="flex justify-between text-sm">
                                                     <span className="">{selectedPool.split('/')[0]}</span>
@@ -311,11 +334,11 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
                                     <div className="space-y-2 text-xs">
                                         <div className="flex justify-between">
                                             <span className="">Fee</span>
-                                            <span className="text-blue">{currentPool.fee}</span>
+                                            <span className="text-secondary-foreground">{currentPool.fee}</span>
                                         </div>
                                         <div className="flex justify-between">
                                             <span className="">Network</span>
-                                            <span className="text-blue">Ethereum</span>
+                                            <span className="text-secondary-foreground">Ethereum</span>
                                         </div>
                                         <div className="flex justify-between">
                                             <span className="">Status</span>
@@ -328,83 +351,17 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
                     </TabsContent>
 
                     {/* PROFILE TAB CONTENT */}
-                    <TabsContent value="profile" className="flex-1 space-y-4 px-4">
-                        {/* Portfolio Overview */}
-                        <div className="-dark p-1 opacity-50">
-                            <h3 className="text-muted-foreground font-medium mb-3">Portfolio Overview</h3>
-                            <div className="grid grid-cols-2 gap-3 mb-4">
-                                <div>
-                                    <p className="text-muted-foreground text-xs">Total Value</p>
-                                    <p className="text-lg font-bold text-muted-foreground">{portfolioData.totalValue}</p>
-                                </div>
-                                <div>
-                                    <p className="text-muted-foreground text-xs">Total PnL</p>
-                                    <p className="text-lg font-bold text-muted-foreground">{portfolioData.totalPnL}</p>
-                                </div>
-                                <div>
-                                    <p className="text-muted-foreground text-xs">Active Positions</p>
-                                    <p className="text-lg font-bold text-muted-foreground">{portfolioData.activePositions}</p>
-                                </div>
-                                <div>
-                                    <p className="text-muted-foreground text-xs">Avg APY</p>
-                                    <p className="text-lg font-bold text-muted-foreground">{portfolioData.averageAPY}</p>
-                                </div>
-                            </div>
-
-                            {/* Performance Metrics */}
-                            <div className="grid grid-cols-2 gap-2 text-xs cosmic-border pt-3">
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">7d Return</span>
-                                    <span className="text-muted-foreground">{portfolioData.performance.return7d}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">30d Return</span>
-                                    <span className="text-muted-foreground">{portfolioData.performance.return30d}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Max Drawdown</span>
-                                    <span className="text-muted-foreground">{portfolioData.performance.maxDrawdown}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Win Rate</span>
-                                    <span className="text-muted-foreground">{portfolioData.performance.winRate}</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Active Positions */}
-                        <div className="opacity-50">
-                            <h3 className="text-muted-foreground font-medium mb-3 text-sm">Active Positions</h3>
-                            <div className="space-y-2 max-h-64 overflow-y-auto">
-                                {positions.map((position, index) => (
-                                    <div key={index} className="-dark p-1">
-                                        <div className="flex justify-between items-start mb-2">
-                                            <div>
-                                                <p className="text-muted-foreground font-medium text-sm">{position.pair}</p>
-                                                <p className="text-muted-foreground text-xs">Entry: {position.entryDate}</p>
-                                            </div>
-                                            <div className="text-right">
-                                                <p className="text-muted-foreground text-sm">{position.amount}</p>
-                                                <p className="text-muted-foreground text-xs">
-                                                    {position.pnl}
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <div className="flex justify-between text-xs">
-                                            <span className="text-muted-foreground">APY: {position.apy}</span>
-                                            <ArrowRight size={12} className="text-muted-foreground" />
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
+                    <TabsContent value="profile" className="flex-1 overflow-hidden">
+                        <ProfilePanel />
                     </TabsContent>
 
                     {/* FEED TAB CONTENT */}
-                    <TabsContent value="feed" className="flex-1 px-4">
+                    <TabsContent value="feed" className="flex-1 px-1">
                         <FeedPanel />
                     </TabsContent>
                 </Tabs>
+
+
             </Card>
         </div >
     );
