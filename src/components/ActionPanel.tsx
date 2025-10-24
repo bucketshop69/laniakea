@@ -14,6 +14,7 @@ import { useSarosDataStore } from '@/modules/saros/state';
 import { useMeteoraDataStore } from '@/modules/meteora/state';
 import { WalletButton } from './WalletButton';
 import { FeedPanel } from '@/modules/feed/components';
+import { ProfilePanel } from '@/modules/profile';
 import Stats from '@/components/Stats';
 
 interface Pool {
@@ -350,76 +351,8 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
                     </TabsContent>
 
                     {/* PROFILE TAB CONTENT */}
-                    <TabsContent value="profile" className="flex-1 space-y-4 px-4">
-                        {/* Portfolio Overview */}
-                        <div className="-dark p-1 opacity-50">
-                            <h3 className="text-muted-foreground font-medium mb-3">Portfolio Overview</h3>
-                            <div className="grid grid-cols-2 gap-3 mb-4">
-                                <div>
-                                    <p className="text-muted-foreground text-xs">Total Value</p>
-                                    <p className="text-lg font-bold text-muted-foreground">{portfolioData.totalValue}</p>
-                                </div>
-                                <div>
-                                    <p className="text-muted-foreground text-xs">Total PnL</p>
-                                    <p className="text-lg font-bold text-muted-foreground">{portfolioData.totalPnL}</p>
-                                </div>
-                                <div>
-                                    <p className="text-muted-foreground text-xs">Active Positions</p>
-                                    <p className="text-lg font-bold text-muted-foreground">{portfolioData.activePositions}</p>
-                                </div>
-                                <div>
-                                    <p className="text-muted-foreground text-xs">Avg APY</p>
-                                    <p className="text-lg font-bold text-muted-foreground">{portfolioData.averageAPY}</p>
-                                </div>
-                            </div>
-
-                            {/* Performance Metrics */}
-                            <div className="grid grid-cols-2 gap-2 text-xs cosmic-border pt-3">
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">7d Return</span>
-                                    <span className="text-muted-foreground">{portfolioData.performance.return7d}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">30d Return</span>
-                                    <span className="text-muted-foreground">{portfolioData.performance.return30d}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Max Drawdown</span>
-                                    <span className="text-muted-foreground">{portfolioData.performance.maxDrawdown}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Win Rate</span>
-                                    <span className="text-muted-foreground">{portfolioData.performance.winRate}</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Active Positions */}
-                        <div className="opacity-50">
-                            <h3 className="text-muted-foreground font-medium mb-3 text-sm">Active Positions</h3>
-                            <div className="space-y-2 max-h-64 overflow-y-auto">
-                                {positions.map((position, index) => (
-                                    <div key={index} className="-dark p-1">
-                                        <div className="flex justify-between items-start mb-2">
-                                            <div>
-                                                <p className="text-muted-foreground font-medium text-sm">{position.pair}</p>
-                                                <p className="text-muted-foreground text-xs">Entry: {position.entryDate}</p>
-                                            </div>
-                                            <div className="text-right">
-                                                <p className="text-muted-foreground text-sm">{position.amount}</p>
-                                                <p className="text-muted-foreground text-xs">
-                                                    {position.pnl}
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <div className="flex justify-between text-xs">
-                                            <span className="text-muted-foreground">APY: {position.apy}</span>
-                                            <ArrowRight size={12} className="text-muted-foreground" />
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
+                    <TabsContent value="profile" className="flex-1 overflow-hidden">
+                        <ProfilePanel />
                     </TabsContent>
 
                     {/* FEED TAB CONTENT */}
