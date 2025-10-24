@@ -423,7 +423,7 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
                     </TabsContent>
 
                     {/* FEED TAB CONTENT */}
-                    <TabsContent value="feed" className="flex-1 px-4">
+                    <TabsContent value="feed" className="flex-1 px-1">
                         <FeedPanel />
                     </TabsContent>
                 </Tabs>
