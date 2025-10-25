@@ -463,12 +463,12 @@ const Stats: React.FC<StatsProps> = ({ selectedPool, currentPool, chartData, cla
                 <div className="flex items-center justify-between mb-6">
                     <div>
                         {chartTitle &&
-                            <h2 className="text-xl font-bold text-primary mb-1">{chartTitle}</h2>
+                            <h2 className="text-xl text-primary mb-1">{chartTitle}</h2>
                         }
                         <p className="text-sm">{chartSubtitle}</p>
                     </div>
                     <div className="text-right">
-                        <p className="text-2xl font-bold text-primary">
+                        <p className="text-2xl text-primary">
                             {primaryStatValue}
                         </p>
                         <p className={`text-sm ${secondaryStatClass}`}>

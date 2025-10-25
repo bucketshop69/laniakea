@@ -137,7 +137,7 @@ export const ProfilePanel = () => {
 
         {/* Total Value - Large Display */}
         <div className="mb-1">
-          <p className="text-3xl font-bold text-primary">
+          <p className="text-3xl  text-primary">
             {formatCurrency(totalValue)}
           </p>
         </div>
