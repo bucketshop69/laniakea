@@ -306,7 +306,7 @@ const DriftTrade = () => {
           variant="outline"
           size="sm"
           className={cn(
-            'col-span-4 h-10 font-bold',
+            'col-span-4 h-10',
             direction === 'long' && 'border-secondary/60 bg-secondary/30 text-secondary-foreground hover:bg-secondary/40'
           )}
           onClick={() => setDirection('long')}
@@ -319,7 +319,7 @@ const DriftTrade = () => {
           variant="outline"
           size="sm"
           className={cn(
-            'col-span-4 h-10 font-bold',
+            'col-span-4 h-10',
             direction === 'short' && 'border-destructive/60 bg-destructive/15 text-destructive hover:bg-destructive/25'
           )}
           onClick={() => setDirection('short')}
@@ -472,7 +472,7 @@ const DriftTrade = () => {
           <Button
             type="button"
             className={cn(
-              'w-full h-10 font-bold',
+              'w-full h-10',
               direction === 'long'
                 ? 'border border-secondary/60 bg-secondary/40 text-secondary-foreground hover:bg-secondary/50'
                 : 'border border-destructive/60 bg-destructive text-foreground hover:bg-destructive/90'

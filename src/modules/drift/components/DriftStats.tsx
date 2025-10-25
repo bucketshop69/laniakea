@@ -82,7 +82,7 @@ export const DriftStats: React.FC<DriftStatsProps> = ({ className }) => {
 
         {/* Mobile view: minimal header with buttons */}
         <div className="flex md:hidden items-center justify-between mb-4 gap-2">
-          <h2 className="text-lg font-bold text-primary truncate">
+          <h2 className="text-lg text-primary truncate">
             {assetName}
           </h2>
 
