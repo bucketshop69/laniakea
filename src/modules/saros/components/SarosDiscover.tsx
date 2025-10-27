@@ -74,7 +74,6 @@ const SarosDiscover = ({ onSelect }: SarosDiscoverProps) => {
   return (
     <div className="space-y-1 p-1">
       <div className="flex items-center gap-1">
-        <Search className="h-4 w-4 text-muted-foreground" />
         <Input
           placeholder="Search pools by token or address"
           value={keyword}

@@ -102,9 +102,12 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
     const triggerMeteoraFetch = useMeteoraDataStore((state) => state.fetchPairGroupsData);
 
     const dapps: DappOption[] = [
-        { id: 'meteora', name: 'Meteora', iconSrc: '/meteora/meteora.png' },
         { id: 'drift', name: 'Drift', iconSrc: '/drift/drift-logo.svg' },
-        { id: 'saros', name: 'Saros', iconSrc: '/saros/SAROS_Mark_Purple.png' },
+        { id: 'meteora', name: 'Meteora', iconSrc: '/meteora/meteora.png' },
+        { id: 'jup', name: 'Jupiter', iconSrc: '/jup/jupiter-logo.webp' },
+        { id: 'raydium', name: 'Raydium', iconSrc: '/raydium/raydium_logo.png', disabled: true },
+        { id: 'orca', name: 'Orca', iconSrc: '/orca/orca_logo.png', disabled: true },
+        { id: 'saros', name: 'Saros', iconSrc: '/saros/SAROS_Mark_Purple.png', disabled: true },
     ];
 
     const handleDappSelection = (id: string) => {

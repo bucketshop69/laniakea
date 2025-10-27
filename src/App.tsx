@@ -21,7 +21,7 @@ const LandingPage = () => {
       <header className="relative z-10 flex items-center justify-between gap-6 px-6 py-8 md:px-16">
         <div className="flex items-center gap-4">
           <img
-            src="/logoV1.png"
+            src="/logov3.png"
             alt="Laniakea Logo"
             className="h-12 w-12 rounded-full"
           />
@@ -458,7 +458,7 @@ const LandingPage = () => {
           <div className="flex flex-col gap-8 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-4">
               <img
-                src="/logoV1.png"
+                src="/logov3.png"
                 alt="Laniakea Logo"
                 className="h-12 w-12 rounded-full"
               />

@@ -15,7 +15,7 @@ import {
 import type { MeteoraProfilePoolGroup, MeteoraPortfolioStats } from '../types/domain'
 import PoolPositionCard from './profile/PoolPositionCard'
 
-const MeteoraProfile = () => {
+const MeteoraProfile = ({ embedded = false }: { embedded?: boolean }) => {
   const { publicKey, connected, signTransaction } = useWallet()
   const { setVisible: setWalletModalVisible } = useWalletModal()
   const connection = useMemo(() => getSolanaConnection(), [])
@@ -217,38 +217,40 @@ const MeteoraProfile = () => {
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      {/* Header with Stats */}
-      <div className="shrink-0 px-2 py-1 border-b border-border/40">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-primary">Portfolio</h2>
+      {/* Header with Stats (hidden when embedded) */}
+      {!embedded && (
+        <div className="shrink-0 px-2 py-1 border-b border-border/40">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-primary">Portfolio</h2>
 
-          {isLoading && poolGroups.length === 0 ? (
-            <div className="flex items-center gap-4">
-              {[...Array(2)].map((_, i) => (
-                <div key={i} className="flex flex-col items-end gap-1">
-                  <div className="h-3 bg-muted rounded w-12 animate-pulse" />
-                  <div className="h-4 bg-muted rounded w-16 animate-pulse" />
+            {isLoading && poolGroups.length === 0 ? (
+              <div className="flex items-center gap-4">
+                {[...Array(2)].map((_, i) => (
+                  <div key={i} className="flex flex-col items-end gap-1">
+                    <div className="h-3 bg-muted rounded w-12 animate-pulse" />
+                    <div className="h-4 bg-muted rounded w-16 animate-pulse" />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex items-center gap-4 text-xs">
+                <div className="text-right">
+                  <div className="text-[10px] text-muted-foreground mb-0.5">Positions</div>
+                  <div className="text-sm font-semibold text-primary">
+                    {formatNumber(stats.totalPositions)}
+                  </div>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="flex items-center gap-4 text-xs">
-              <div className="text-right">
-                <div className="text-[10px] text-muted-foreground mb-0.5">Positions</div>
-                <div className="text-sm font-semibold text-primary">
-                  {formatNumber(stats.totalPositions)}
+                <div className="text-right">
+                  <div className="text-[10px] text-muted-foreground mb-0.5">Pools</div>
+                  <div className="text-sm font-semibold text-primary">
+                    {formatNumber(stats.totalPools)}
+                  </div>
                 </div>
               </div>
-              <div className="text-right">
-                <div className="text-[10px] text-muted-foreground mb-0.5">Pools</div>
-                <div className="text-sm font-semibold text-primary">
-                  {formatNumber(stats.totalPools)}
-                </div>
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Content */}
       <div className="flex-1 overflow-auto p-4">

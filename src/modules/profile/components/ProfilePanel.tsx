@@ -1,14 +1,18 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { useWallet } from '@solana/wallet-adapter-react'
 import { useWalletModal } from '@solana/wallet-adapter-react-ui'
 import { Loader2, AlertCircle, Wallet, TrendingUp, TrendingDown } from 'lucide-react'
 import { useProfileStore } from '../state/profileStore'
+import MeteoraProfile from '@/modules/meteora/components/MeteoraProfile'
+import DriftPositions from '@/modules/drift/components/DriftPositions'
 
 export const ProfilePanel = () => {
   const { publicKey, connected } = useWallet()
   const { setVisible: setWalletModalVisible } = useWalletModal()
+  const [refreshKey, setRefreshKey] = useState(0)
 
   const overview = useProfileStore((state) => state.overview)
   const isLoading = useProfileStore((state) => state.isLoading)
@@ -123,7 +127,12 @@ export const ProfilePanel = () => {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => publicKey && fetchProfile(publicKey.toString(), true)}
+            onClick={() => {
+              if (publicKey) {
+                fetchProfile(publicKey.toString(), true)
+                setRefreshKey((k) => k + 1)
+              }
+            }}
             disabled={isLoading}
             className="text-xs h-7"
           >
@@ -165,16 +174,24 @@ export const ProfilePanel = () => {
         </div>
       </div>
 
-      {/* Content - Coming Soon Message */}
-      <div className="flex-1 overflow-auto p-4 flex items-center justify-center">
-        <div className="text-center space-y-2">
-          <p className="text-sm text-muted-foreground">
-            Positions are coming soon
-          </p>
-          <p className="text-xs text-muted-foreground/60">
-            Detailed token holdings and position analytics will be available shortly
-          </p>
-        </div>
+      {/* Content - Combined Positions */}
+      <div className="flex-1 overflow-hidden p-4">
+        <Tabs defaultValue="drift" className="flex h-full flex-col">
+          <TabsList className="shrink-0 w-full justify-start gap-1">
+            <TabsTrigger value="drift">Perps (Drift)</TabsTrigger>
+            <TabsTrigger value="meteora">Liquidity (Meteora)</TabsTrigger>
+          </TabsList>
+          <TabsContent value="drift" className="flex-1 overflow-hidden">
+            <div className="h-full overflow-auto">
+              <DriftPositions key={`drift-${refreshKey}`} />
+            </div>
+          </TabsContent>
+          <TabsContent value="meteora" className="flex-1 overflow-hidden">
+            <div className="h-full overflow-auto">
+              <MeteoraProfile embedded key={`meteora-${refreshKey}`} />
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   )

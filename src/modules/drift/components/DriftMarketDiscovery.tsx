@@ -58,7 +58,6 @@ const DriftMarketDiscovery = () => {
   return (
     <div className="space-y-1 p-1">
       <div className="flex items-center gap-1">
-        <Search className="h-4 w-4 text-muted-foreground" />
         <Input
           placeholder="Search markets by symbol"
           value={keyword}
@@ -103,7 +102,7 @@ const DriftMarketDiscovery = () => {
               const snapshot = snapshots[market.marketIndex]
               const isSelected = selectedMarketIndex === market.marketIndex
               return (
-                <TableRow 
+                <TableRow
                   key={market.marketIndex}
                   className={cn(
                     'cursor-pointer transition-colors',
@@ -123,8 +122,8 @@ const DriftMarketDiscovery = () => {
                       snapshot?.change24hPct === undefined
                         ? 'text-muted-foreground'
                         : snapshot.change24hPct >= 0
-                        ? 'text-secondary-foreground'
-                        : 'text-destructive'
+                          ? 'text-secondary-foreground'
+                          : 'text-destructive'
                     )}
                   >
                     {formatPercent(snapshot?.change24hPct)}
