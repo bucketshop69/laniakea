@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ArrowRight, Twitter } from 'lucide-react';
 import Stats from './components/Stats';
 import ActionPanel from './components/ActionPanel';
+import AdminPanel from './modules/feed/admin/AdminPanel';
 
 
 
@@ -491,9 +492,9 @@ const LandingPage = () => {
   );
 };
 
-const computeIsAppSurface = () => {
+const computeSurface = () => {
   if (typeof window === 'undefined') {
-    return false;
+    return 'landing';
   }
 
   const { hostname, pathname, search } = window.location;
@@ -501,17 +502,29 @@ const computeIsAppSurface = () => {
   const params = new URLSearchParams(search);
 
   if (params.get('surface') === 'app') {
-    return true;
+    return 'app';
+  }
+
+  if (params.get('surface') === 'admin') {
+    return 'admin';
   }
 
   if (params.get('surface') === 'landing') {
-    return false;
+    return 'landing';
   }
 
   const hostSegments = normalizedHost.split('.');
   const hostIndicatesApp = hostSegments[0] === 'app';
 
-  return hostIndicatesApp || pathname.startsWith('/app');
+  if (hostIndicatesApp || pathname.startsWith('/app')) {
+    return 'app';
+  }
+
+  if (pathname.startsWith('/admin')) {
+    return 'admin';
+  }
+
+  return 'landing';
 };
 
 const SpaceLiquidityPool = () => {
@@ -606,9 +619,13 @@ const SpaceLiquidityPool = () => {
 };
 
 const App = () => {
-  const [isAppSurface] = useState(computeIsAppSurface);
+  const [surface] = useState(computeSurface);
 
-  return isAppSurface ? <SpaceLiquidityPool /> : <LandingPage />;
+  if (surface === 'admin') {
+    return <AdminPanel />;
+  }
+
+  return surface === 'app' ? <SpaceLiquidityPool /> : <LandingPage />;
 };
 
 export default App;
