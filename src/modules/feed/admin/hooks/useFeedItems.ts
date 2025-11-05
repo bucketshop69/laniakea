@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { AdminFeedItem } from '../types';
-import { feedAdminService } from '../services/feedAdminService';
-import { feedService } from '../services/feedService';
+import { feedAdminService } from '../../services/feedAdminService';
+import { feedService } from '../../services/feedService';
 
 interface UseFeedItemsReturn {
   feedItems: AdminFeedItem[];
@@ -28,7 +28,7 @@ export const useFeedItems = (
     try {
       setLoading(true);
       const items = await feedService.getAllFeedItems();
-      const adminItems: AdminFeedItem[] = items.map(item => ({
+      const adminItems: AdminFeedItem[] = items.map((item: any) => ({
         id: item.id,
         title: item.title,
         description: item.description || '',
@@ -43,7 +43,7 @@ export const useFeedItems = (
     } catch (err) {
       console.error('Error loading feed items:', err);
       setError('Failed to load existing feed items');
-      setFormData(prev => ({
+      setFormData((prev: any) => ({
         ...prev,
         error: 'Failed to load existing feed items'
       }));
@@ -62,7 +62,7 @@ export const useFeedItems = (
         const items = await feedService.getAllFeedItems();
         
         // Adapt the items to our AdminFeedItem interface
-        const adminItems: AdminFeedItem[] = items.map(item => ({
+        const adminItems: AdminFeedItem[] = items.map((item: any) => ({
           id: item.id,
           title: item.title,
           description: item.description || '',
@@ -79,7 +79,7 @@ export const useFeedItems = (
       } catch (err) {
         console.error('Error loading feed items:', err);
         setError('Failed to load existing feed items');
-        setFormData(prev => ({
+        setFormData((prev: any) => ({
           ...prev,
           error: 'Failed to load existing feed items'
         }));
@@ -118,14 +118,14 @@ export const useFeedItems = (
           setEditingItemId(null);
         }
       } else {
-        setFormData(prev => ({
+        setFormData((prev: any) => ({
           ...prev,
           error: result.error || 'Failed to delete feed item'
         }));
       }
     } catch (err) {
       console.error('Error deleting feed item:', err);
-      setFormData(prev => ({
+      setFormData((prev: any) => ({
         ...prev,
         error: 'An error occurred while deleting the feed item'
       }));

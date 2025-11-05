@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { AdminFormState, AdminFeedItem } from './types';
-import { feedAdminService } from '../services/feedAdminService';
-import { feedService } from '../services/feedService';
+import { AdminFormState, AdminFeedItem } from '../types';
+import { feedAdminService } from '../../services/feedAdminService';
+import { feedService } from '../../services/feedService';
 
 interface UseFeedFormReturn {
   formData: AdminFormState;
@@ -69,7 +69,7 @@ export const useFeedForm = (
   const addCategory = () => {
     if (newCategory.trim() && !categories.includes(newCategory.trim())) {
       setCategories([...categories, newCategory.trim()]);
-      setFormDataLocal(prev => ({
+      setFormDataLocal((prev: AdminFormState) => ({
         ...prev,
         category: [...categories, newCategory.trim()].join(',') // Keep as comma-separated for the form state
       }));
@@ -80,7 +80,7 @@ export const useFeedForm = (
   const removeCategory = (categoryToRemove: string) => {
     const updatedCategories = categories.filter(cat => cat !== categoryToRemove);
     setCategories(updatedCategories);
-    setFormDataLocal(prev => ({
+    setFormDataLocal((prev: AdminFormState) => ({
       ...prev,
       category: updatedCategories.join(',') // Update form state
     }));
@@ -88,33 +88,33 @@ export const useFeedForm = (
 
   const validateForm = (): boolean => {
     if (!formData.title.trim()) {
-      setFormDataLocal(prev => ({ ...prev, error: 'Title is required' }));
+      setFormDataLocal((prev: AdminFormState) => ({ ...prev, error: 'Title is required' }));
       return false;
     }
     
     if (!formData.description.trim()) {
-      setFormDataLocal(prev => ({ ...prev, error: 'Description is required' }));
+      setFormDataLocal((prev: AdminFormState) => ({ ...prev, error: 'Description is required' }));
       return false;
     }
     
     if (!formData.asset_related_to.trim()) {
-      setFormDataLocal(prev => ({ ...prev, error: 'Asset is required' }));
+      setFormDataLocal((prev: AdminFormState) => ({ ...prev, error: 'Asset is required' }));
       return false;
     }
     
     if (categories.length === 0) {
-      setFormDataLocal(prev => ({ ...prev, error: 'At least one category is required' }));
+      setFormDataLocal((prev: AdminFormState) => ({ ...prev, error: 'At least one category is required' }));
       return false;
     }
     
     // Validate timestamp format (YYYY-MM-DDTHH:mm)
     const timestampRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
     if (!timestampRegex.test(formData.timestamp)) {
-      setFormDataLocal(prev => ({ ...prev, error: 'Invalid timestamp format' }));
+      setFormDataLocal((prev: AdminFormState) => ({ ...prev, error: 'Invalid timestamp format' }));
       return false;
     }
     
-    setFormDataLocal(prev => ({ ...prev, error: null }));
+    setFormDataLocal((prev: AdminFormState) => ({ ...prev, error: null }));
     return true;
   };
 
@@ -176,7 +176,7 @@ export const useFeedForm = (
           error: null
         });
       } else {
-        setFormDataLocal(prev => ({
+        setFormDataLocal((prev: AdminFormState) => ({
           ...prev,
           error: result.error || 'Failed to publish feed item'
         }));
@@ -244,7 +244,7 @@ export const useFeedForm = (
           error: null
         });
       } else {
-        setFormDataLocal(prev => ({
+        setFormDataLocal((prev: AdminFormState) => ({
           ...prev,
           error: result.error || 'Failed to save draft'
         }));
@@ -282,7 +282,7 @@ export const useFeedForm = (
     });
     setCategories([]);
     setEditingItemId(null);
-    setFormData({
+    setFormDataGlobal({
       title: '',
       description: '',
       asset_related_to: '',

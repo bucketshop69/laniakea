@@ -129,21 +129,6 @@ All admin panel code should be located in: `src/modules/feed/admin/`
 - **Q: How do I handle optimistic updates vs. waiting for server response?**
   A: Start with server-response approach for simplicity, implement optimistic updates in later iterations if needed.
 
-### Milestone 4: Content Moderation
-- **Q: How should the review queue be implemented?**
-  A: Use a view that filters items based on status, or add a status field if more complex workflows are needed.
-- **Q: What validation is needed beyond basic form validation?**
-  A: Content length limits, XSS prevention, and business rule validation (e.g., required fields, valid timestamp format).
-
-### Milestone 5: User Experience Enhancements
-- **Q: How should I implement search functionality?**
-  A: Start with client-side search of already-loaded data, then implement server-side search in Supabase if performance becomes an issue.
-- **Q: What pagination approach should I use?**
-  A: Use offset-based pagination with limit and offset parameters to the database query.
-- **Q: How should the preview mode work?**
-  A: Create a component that renders feed items exactly as they would appear in the main application, using the same FeedCard component.
-
-### Milestone 6: Security Implementation
 - **Q: Should I use Supabase Auth or a custom solution?**
   A: Start with a simple token-based authentication using environment variables for simplicity, plan to upgrade to Supabase Auth for production.
 - **Q: How should I store session information?**
