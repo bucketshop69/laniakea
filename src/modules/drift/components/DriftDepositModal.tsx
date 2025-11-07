@@ -4,6 +4,8 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { getSpotAssets, depositCollateral, getAccountMetrics, type SpotAsset } from '../services/driftPositionService'
 import { useDriftPositionsStore as usePositionsStoreRef } from '../state/driftPositionsStore'
+import { handleWaitlistAction } from '@/lib/waitlistHandler'
+import { useWaitlistStore } from '@/store/waitlistStore'
 
 type Props = {
   open: boolean
@@ -18,6 +20,7 @@ export const DriftDepositModal = ({ open, onOpenChange, defaultAssetSymbol = 'US
   const [amount, setAmount] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const { isWaitlistActive } = useWaitlistStore()
 
   useEffect(() => {
     if (!open) return
@@ -75,6 +78,12 @@ export const DriftDepositModal = ({ open, onOpenChange, defaultAssetSymbol = 'US
             <Button
               size="sm"
               onClick={async () => {
+                // Waitlist middleware - check if functionality is on waitlist before proceeding
+                if (isWaitlistActive) {
+                  handleWaitlistAction('depositing', window.solana?.publicKey?.toString() || null);
+                  return; // Stop execution and show waitlist modal instead
+                }
+                
                 setError(null)
                 const amt = parseFloat(amount)
                 if (!Number.isFinite(amt) || amt <= 0) {
@@ -104,7 +113,9 @@ export const DriftDepositModal = ({ open, onOpenChange, defaultAssetSymbol = 'US
               }}
               disabled={submitting}
             >
-              {submitting ? 'Depositing…' : 'Deposit'}
+              {isWaitlistActive 
+                ? 'Join Waitlist' 
+                : (submitting ? 'Depositing…' : 'Deposit')}
             </Button>
           </div>
         </div>

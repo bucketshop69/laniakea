@@ -21,6 +21,8 @@ import AddLiquidityForm from './manage/AddLiquidityForm'
 import RemoveLiquidityPanel, { type MeteoraDisplayPosition } from './manage/RemoveLiquidityPanel'
 import { sendViaSanctum } from '@/lib/sanctumGateway'
 import { transformPositionsToDisplayFormat } from '../utils/positionTransform'
+import { handleWaitlistAction } from '@/lib/waitlistHandler'
+import { useWaitlistStore } from '@/store/waitlistStore'
 
 interface MeteoraManageProps {
   onBack: () => void
@@ -650,6 +652,13 @@ const MeteoraManage = ({ onBack }: MeteoraManageProps) => {
   }
 
   const handleAddLiquidity = async () => {
+    // Waitlist middleware - check if functionality is on waitlist before proceeding
+    const { isWaitlistActive } = useWaitlistStore.getState();
+    if (isWaitlistActive) {
+      handleWaitlistAction('adding liquidity', publicKey?.toString() || null);
+      return; // Stop execution and show waitlist modal instead
+    }
+
     if (!connected || !publicKey) {
       setWalletModalVisible(true)
       return
@@ -783,6 +792,13 @@ const MeteoraManage = ({ onBack }: MeteoraManageProps) => {
   }
 
   const handleRemoveLiquidity = async (position: MeteoraDisplayPosition) => {
+    // Waitlist middleware - check if functionality is on waitlist before proceeding
+    const { isWaitlistActive } = useWaitlistStore.getState();
+    if (isWaitlistActive) {
+      handleWaitlistAction('removing liquidity', publicKey?.toString() || null);
+      return; // Stop execution and show waitlist modal instead
+    }
+
     if (!connected || !publicKey) {
       setWalletModalVisible(true)
       return

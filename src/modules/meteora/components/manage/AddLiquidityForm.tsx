@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
+import { useWaitlistStore } from '@/store/waitlistStore'
 import type { MeteoraBinLiquidityPoint } from '../../services/bins'
 import MeteoraBinChart from '../MeteoraBinChart'
 
@@ -89,6 +90,7 @@ const AddLiquidityForm = ({
   // Local state for price inputs to allow free typing
   const [minPriceInput, setMinPriceInput] = useState('')
   const [maxPriceInput, setMaxPriceInput] = useState('')
+  const { isWaitlistActive } = useWaitlistStore()
 
   // Update input values when displayMinPrice/displayMaxPrice change (from brush)
   useEffect(() => {
@@ -244,12 +246,17 @@ const AddLiquidityForm = ({
           disabled={isSubmitting || isSubmitDisabled}
         >
           {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          {isSubmitting ? 'Adding Liquidity...' : (
-            <>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add Liquidity
-            </>
-          )}
+          {isWaitlistActive 
+            ? 'Join Waitlist' 
+            : (isSubmitting 
+              ? 'Adding Liquidity...' 
+              : (
+                <>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Add Liquidity
+                </>
+              )
+            )}
         </Button>
       )}
     </div>

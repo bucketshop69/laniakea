@@ -3,6 +3,7 @@ import { ArrowRight, Twitter } from 'lucide-react';
 import Stats from './components/Stats';
 import ActionPanel from './components/ActionPanel';
 import AdminPanel from './modules/feed/admin/AdminPanel';
+import { WaitlistModal } from './components/WaitlistModal';
 
 
 
@@ -622,10 +623,20 @@ const App = () => {
   const [surface] = useState(computeSurface);
 
   if (surface === 'admin') {
-    return <AdminPanel />;
+    return (
+      <>
+        <AdminPanel />
+        <WaitlistModal />
+      </>
+    );
   }
 
-  return surface === 'app' ? <SpaceLiquidityPool /> : <LandingPage />;
+  return (
+    <>
+      {surface === 'app' ? <SpaceLiquidityPool /> : <LandingPage />}
+      <WaitlistModal />
+    </>
+  );
 };
 
 export default App;
