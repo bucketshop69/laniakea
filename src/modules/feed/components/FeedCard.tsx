@@ -66,7 +66,9 @@ export const FeedCard: React.FC<FeedCardProps> = ({ item, onSaveToChart, onRemov
 
             {/* Description */}
             {item.description && (
-              <p className="text-xs text-muted-foreground leading-relaxed">{item.description}</p>
+              <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3 overflow-hidden">
+                {item.description}
+              </p>
             )}
           </div>
 
@@ -90,15 +92,6 @@ export const FeedCard: React.FC<FeedCardProps> = ({ item, onSaveToChart, onRemov
               ))}
 
               {/* Asset tag */}
-              {item.asset_related_to && (
-                <span
-                  className={`px-2 py-0.5 rounded text-xs font-medium text-center ${getAssetColor(
-                    item.asset_related_to
-                  )}`}
-                >
-                  {item.asset_related_to}
-                </span>
-              )}
             </div>
 
             {/* Action Buttons */}
