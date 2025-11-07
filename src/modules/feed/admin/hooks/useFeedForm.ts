@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AdminFormState, AdminFeedItem } from '../types';
 import { feedAdminService } from '../../services/feedAdminService';
 import { feedService } from '../../services/feedService';
@@ -9,6 +9,9 @@ interface UseFeedFormReturn {
   categories: string[];
   newCategory: string;
   editingItemId: string | null;
+  submitLoading: boolean;
+  draftLoading: boolean;
+  successMessage: string | null;
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
   handleTimestampChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleImpactChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
@@ -34,13 +37,16 @@ export const useFeedForm = (
     category: '',
     source: '',
     impact: 'neutral',
-    published: false,
+    published: true, // Changed to true for default "Publish immediately"
     error: null
   });
 
   const [categories, setCategories] = useState<string[]>([]);
   const [newCategory, setNewCategory] = useState<string>('');
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [submitLoading, setSubmitLoading] = useState(false);
+  const [draftLoading, setDraftLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -120,135 +126,171 @@ export const useFeedForm = (
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitLoading(true);
     
     if (validateForm()) {
-      // Prepare the feed item data from form data
-      const feedItemData = {
-        title: formData.title,
-        description: formData.description,
-        timestamp: formData.timestamp,
-        category: categories, // Using the actual categories array
-        asset_related_to: formData.asset_related_to,
-        source: formData.source,
-        impact: formData.impact,
-        published: formData.published
-      };
-      
-      let result;
-      if (editingItemId) {
-        // Update existing item
-        result = await feedAdminService.updateFeedItem(editingItemId, feedItemData);
-      } else {
-        // Create new item
-        result = await feedAdminService.createFeedItem(feedItemData);
-      }
-      
-      if (result.success) {
+      try {
+        // Prepare the feed item data from form data
+        const feedItemData = {
+          title: formData.title,
+          description: formData.description,
+          timestamp: formData.timestamp,
+          category: categories, // Using the actual categories array
+          asset_related_to: formData.asset_related_to,
+          source: formData.source,
+          impact: formData.impact,
+          published: formData.published
+        };
+        
+        let result;
         if (editingItemId) {
-          alert('Feed item updated successfully!');
+          // Update existing item
+          result = await feedAdminService.updateFeedItem(editingItemId, feedItemData);
         } else {
-          alert('Feed item published successfully!');
+          // Create new item
+          result = await feedAdminService.createFeedItem(feedItemData);
         }
         
-        // Reset the form after successful submission
-        setFormDataLocal({
-          title: '',
-          description: '',
-          asset_related_to: '',
-          timestamp: new Date().toISOString().slice(0, 16),
-          category: '',
-          source: '',
-          impact: 'neutral',
-          published: false,
-          error: null
-        });
-        setCategories([]);
-        setEditingItemId(null); // Clear editing mode
-        setFormDataGlobal({
-          title: '',
-          description: '',
-          asset_related_to: '',
-          timestamp: new Date().toISOString().slice(0, 16),
-          category: '',
-          source: '',
-          impact: 'neutral',
-          published: false,
-          error: null
-        });
-      } else {
+        if (result.success) {
+          // Show success message and clear it after 3 seconds
+          if (editingItemId) {
+            setSuccessMessage('Feed item updated successfully!');
+          } else {
+            setSuccessMessage('Feed item published successfully!');
+          }
+          
+          // Clear success message after 3 seconds
+          setTimeout(() => {
+            setSuccessMessage(null);
+          }, 3000);
+          
+          // Reset the form after successful submission
+          setFormDataLocal({
+            title: '',
+            description: '',
+            asset_related_to: '',
+            timestamp: new Date().toISOString().slice(0, 16),
+            category: '',
+            source: '',
+            impact: 'neutral',
+            published: true, // Reset to default value
+            error: null
+          });
+          setCategories([]);
+          setEditingItemId(null); // Clear editing mode
+          setFormDataGlobal({
+            title: '',
+            description: '',
+            asset_related_to: '',
+            timestamp: new Date().toISOString().slice(0, 16),
+            category: '',
+            source: '',
+            impact: 'neutral',
+            published: true, // Reset to default value
+            error: null
+          });
+        } else {
+          setFormDataLocal((prev: AdminFormState) => ({
+            ...prev,
+            error: result.error || 'Failed to publish feed item'
+          }));
+        }
+      } catch (error) {
         setFormDataLocal((prev: AdminFormState) => ({
           ...prev,
-          error: result.error || 'Failed to publish feed item'
+          error: 'An unexpected error occurred'
         }));
+      } finally {
+        setSubmitLoading(false);
       }
+    } else {
+      setSubmitLoading(false);
     }
   };
 
   const saveAsDraft = async () => {
+    setDraftLoading(true);
     if (validateForm()) {
-      // Prepare the feed item data from form data, but set published to false
-      const feedItemData = {
-        ...formData,
-        published: false,
-        category: categories, // Using the actual categories array
-        asset_related_to: formData.asset_related_to,
-        source: formData.source,
-        impact: formData.impact,
-      };
-      
-      let result;
-      if (editingItemId) {
-        // Update existing item as draft
-        result = await feedAdminService.updateFeedItem(editingItemId, {
-          ...feedItemData,
-          published: false
-        });
-      } else {
-        // Create new draft item
-        result = await feedAdminService.createFeedItem({
-          ...feedItemData,
-          published: false
-        });
-      }
-      
-      if (result.success) {
+      try {
+        // Prepare the feed item data from form data, but set published to false
+        const feedItemData = {
+          ...formData,
+          published: false,
+          category: categories, // Using the actual categories array
+          asset_related_to: formData.asset_related_to,
+          source: formData.source,
+          impact: formData.impact,
+        };
+        
+        let result;
         if (editingItemId) {
-          alert('Draft updated successfully!');
+          // Update existing item as draft
+          result = await feedAdminService.updateFeedItem(editingItemId, {
+            ...feedItemData,
+            published: false
+          });
         } else {
-          alert('Draft saved successfully!');
+          // Create new draft item
+          result = await feedAdminService.createFeedItem({
+            ...feedItemData,
+            published: false
+          });
         }
         
-        // Reset the form after successful submission
-        setFormDataLocal({
-          title: '',
-          description: '',
-          asset_related_to: '',
-          timestamp: new Date().toISOString().slice(0, 16),
-          category: '',
-          source: '',
-          impact: 'neutral',
-          published: false,
-          error: null
-        });
-        setCategories([]);
-        setEditingItemId(null); // Clear editing mode
-        setFormDataGlobal({
-          title: '',
-          description: '',
-          asset_related_to: '',
-          timestamp: new Date().toISOString().slice(0, 16),
-          category: '',
-          source: '',
-          impact: 'neutral',
-          published: false,
-          error: null
-        });
-      } else {
+        if (result.success) {
+          // Show success message and clear it after 3 seconds
+          if (editingItemId) {
+            setSuccessMessage('Draft updated successfully!');
+          } else {
+            setSuccessMessage('Draft saved successfully!');
+          }
+          
+          // Clear success message after 3 seconds
+          setTimeout(() => {
+            setSuccessMessage(null);
+          }, 3000);
+          
+          // Reset the form after successful submission
+          setFormDataLocal({
+            title: '',
+            description: '',
+            asset_related_to: '',
+            timestamp: new Date().toISOString().slice(0, 16),
+            category: '',
+            source: '',
+            impact: 'neutral',
+            published: true, // Reset to default value
+            error: null
+          });
+          setCategories([]);
+          setEditingItemId(null); // Clear editing mode
+          setFormDataGlobal({
+            title: '',
+            description: '',
+            asset_related_to: '',
+            timestamp: new Date().toISOString().slice(0, 16),
+            category: '',
+            source: '',
+            impact: 'neutral',
+            published: true, // Reset to default value
+            error: null
+          });
+        } else {
+          setFormDataLocal((prev: AdminFormState) => ({
+            ...prev,
+            error: result.error || 'Failed to save draft'
+          }));
+        }
+      } catch (error) {
         setFormDataLocal((prev: AdminFormState) => ({
           ...prev,
-          error: result.error || 'Failed to save draft'
+          error: 'An unexpected error occurred'
         }));
+      } finally {
+        setDraftLoading(false);
       }
+    } else {
+      setDraftLoading(false);
     }
   };
 
@@ -258,13 +300,14 @@ export const useFeedForm = (
       description: item.description,
       asset_related_to: item.asset_related_to,
       timestamp: item.timestamp.slice(0, 16), // Format as YYYY-MM-DDTHH:mm
-      category: item.category.join(','), // Convert array back to comma-separated string for form
+      category: Array.isArray(item.category) ? item.category.join(',') : item.category, // Convert array back to comma-separated string for form
       source: item.source || '',
       impact: item.impact || 'neutral',
       published: item.published || false,
       error: null
     });
-    setCategories(item.category);
+    // Ensure categories is an array
+    setCategories(Array.isArray(item.category) ? item.category : item.category?.split(',') || []);
     setEditingItemId(item.id || null);
   };
 
@@ -277,7 +320,7 @@ export const useFeedForm = (
       category: '',
       source: '',
       impact: 'neutral',
-      published: false,
+      published: true, // Reset to default value
       error: null
     });
     setCategories([]);
@@ -290,17 +333,20 @@ export const useFeedForm = (
       category: '',
       source: '',
       impact: 'neutral',
-      published: false,
+      published: true, // Reset to default value
       error: null
     });
   };
 
   return {
-    formData: formData,
+    formData,
     setFormData: setFormDataLocal,
     categories,
     newCategory,
     editingItemId,
+    submitLoading,
+    draftLoading,
+    successMessage,
     handleInputChange,
     handleTimestampChange,
     handleImpactChange,

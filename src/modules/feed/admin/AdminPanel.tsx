@@ -4,6 +4,8 @@ import FeedForm from './components/FeedForm';
 import FeedItemsList from './components/FeedItemsList';
 import { useFeedForm } from './hooks/useFeedForm';
 import { useFeedItems } from './hooks/useFeedItems';
+import { FeedCard } from '@/modules/feed/components/FeedCard';
+import type { FeedItem } from '@/modules/feed/types/feedTypes';
 
 const AdminPanel: React.FC = () => {
   const [formDataState, setFormData] = useState<AdminFormState>({
@@ -25,6 +27,9 @@ const AdminPanel: React.FC = () => {
     categories,
     newCategory,
     editingItemId,
+    submitLoading,
+    draftLoading,
+    successMessage,
     handleInputChange,
     handleTimestampChange,
     handleImpactChange,
@@ -67,6 +72,9 @@ const AdminPanel: React.FC = () => {
             categories={categories}
             newCategory={newCategory}
             editingItemId={editingItemId}
+            submitLoading={submitLoading}
+            draftLoading={draftLoading}
+            successMessage={successMessage}
             handleInputChange={handleInputChange}
             handleTimestampChange={handleTimestampChange}
             handleImpactChange={handleImpactChange}
@@ -79,18 +87,41 @@ const AdminPanel: React.FC = () => {
           />
         </div>
 
-        {/* Feed Items List - 4 columns */}
-        <div className="lg:col-span-4">
-          <FeedItemsList
-            feedItems={feedItems}
-            loading={loading}
-            error={error}
-            loadItemForEdit={loadItemForEdit}
-            handleDelete={handleDelete}
-            setShowDeleteConfirm={setShowDeleteConfirm}
-            showDeleteConfirm={showDeleteConfirm}
-            cancelDelete={cancelDelete}
-          />
+        {/* Preview and Feed Items List - 4 columns */}
+        <div className="lg:col-span-4 space-y-6">
+          {/* Preview Section */}
+          <div>
+            <h3 className="text-lg font-medium mb-3">Preview</h3>
+            <div className="max-w-2xl">
+              <FeedCard 
+                item={{
+                  id: 'preview', // placeholder ID
+                  title: formData.title,
+                  description: formData.description || null,
+                  timestamp: formData.timestamp,
+                  category: categories && categories.length > 0 ? categories : [],
+                  asset_related_to: formData.asset_related_to || null,
+                  link: formData.source || null,
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString()
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Feed Items List */}
+          <div>
+            <FeedItemsList
+              feedItems={feedItems}
+              loading={loading}
+              error={error}
+              loadItemForEdit={loadItemForEdit}
+              handleDelete={handleDelete}
+              setShowDeleteConfirm={setShowDeleteConfirm}
+              showDeleteConfirm={showDeleteConfirm}
+              cancelDelete={cancelDelete}
+            />
+          </div>
         </div>
       </div>
     </div>

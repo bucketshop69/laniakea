@@ -28,12 +28,13 @@ export const useFeedItems = (
     try {
       setLoading(true);
       const items = await feedService.getAllFeedItems();
+      // Convert feedItems to admin format including the categories
       const adminItems: AdminFeedItem[] = items.map((item: any) => ({
         id: item.id,
         title: item.title,
         description: item.description || '',
         timestamp: item.timestamp,
-        category: item.category || [],
+        category: Array.isArray(item.category) ? item.category : item.category?.split(',') || [],
         asset_related_to: item.asset_related_to || '',
         source: item.link || '',
         impact: 'neutral', // Default impact
@@ -67,7 +68,7 @@ export const useFeedItems = (
           title: item.title,
           description: item.description || '',
           timestamp: item.timestamp,
-          category: item.category || [],
+          category: Array.isArray(item.category) ? item.category : item.category?.split(',') || [],
           asset_related_to: item.asset_related_to || '',
           source: item.link || '',
           // Note: The original feed item doesn't have impact, so we default to neutral

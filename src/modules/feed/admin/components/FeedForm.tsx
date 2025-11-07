@@ -6,6 +6,9 @@ interface FeedFormProps {
   categories: string[];
   newCategory: string;
   editingItemId: string | null;
+  submitLoading: boolean;
+  draftLoading: boolean;
+  successMessage: string | null;
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
   handleTimestampChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleImpactChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
@@ -22,6 +25,9 @@ const FeedForm: React.FC<FeedFormProps> = ({
   categories,
   newCategory,
   editingItemId,
+  submitLoading,
+  draftLoading,
+  successMessage,
   handleInputChange,
   handleTimestampChange,
   handleImpactChange,
@@ -37,6 +43,12 @@ const FeedForm: React.FC<FeedFormProps> = ({
       {formData.error && (
         <div className="mb-1 p-1 bg-destructive/20 text-destructive-foreground rounded-lg">
           {formData.error}
+        </div>
+      )}
+
+      {successMessage && (
+        <div className="mb-1 p-1 bg-green-500/20 text-green-500 rounded-lg">
+          {successMessage}
         </div>
       )}
 
@@ -67,21 +79,6 @@ const FeedForm: React.FC<FeedFormProps> = ({
           rows={4}
           className="w-full p-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
           placeholder="Enter description"
-        />
-      </div>
-      
-      <div>
-        <label htmlFor="asset_related_to" className="block text-sm font-medium mb-1">
-          Asset Related To *
-        </label>
-        <input
-          type="text"
-          id="asset_related_to"
-          name="asset_related_to"
-          value={formData.asset_related_to}
-          onChange={handleInputChange}
-          className="w-full p-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-          placeholder="e.g., SOL, BTC, ETH"
         />
       </div>
       
@@ -215,16 +212,38 @@ const FeedForm: React.FC<FeedFormProps> = ({
       <div className="flex flex-wrap gap-2 pt-4">
         <button
           type="submit"
-          className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:opacity-90 focus:outline-none focus:ring-1 focus:ring-ring focus:ring-offset-1 focus:ring-offset-background"
+          disabled={submitLoading}
+          className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:opacity-90 focus:outline-none focus:ring-1 focus:ring-ring focus:ring-offset-1 focus:ring-offset-background disabled:opacity-50"
         >
-          {editingItemId ? 'Update Feed Item' : 'Publish Feed Item'}
+          {submitLoading ? (
+            <span className="flex items-center">
+              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              {editingItemId ? 'Updating...' : 'Publishing...'}
+            </span>
+          ) : (
+            editingItemId ? 'Update Feed Item' : 'Publish Feed Item'
+          )}
         </button>
         <button
           type="button"
           onClick={saveAsDraft}
-          className="px-4 py-2 bg-secondary text-secondary-foreground rounded-md hover:opacity-90 focus:outline-none focus:ring-1 focus:ring-ring focus:ring-offset-1 focus:ring-offset-background"
+          disabled={draftLoading}
+          className="px-4 py-2 bg-secondary text-secondary-foreground rounded-md hover:opacity-90 focus:outline-none focus:ring-1 focus:ring-ring focus:ring-offset-1 focus:ring-offset-background disabled:opacity-50"
         >
-          {editingItemId ? 'Update Draft' : 'Save as Draft'}
+          {draftLoading ? (
+            <span className="flex items-center">
+              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              {editingItemId ? 'Updating Draft...' : 'Saving Draft...'}
+            </span>
+          ) : (
+            editingItemId ? 'Update Draft' : 'Save as Draft'
+          )}
         </button>
         {editingItemId && (
           <button
