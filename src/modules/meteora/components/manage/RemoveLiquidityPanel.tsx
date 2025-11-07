@@ -1,6 +1,7 @@
 import { AlertCircle, Loader2 } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { useWaitlistStore } from '@/store/waitlistStore'
 
 export interface MeteoraDisplayPosition {
   positionMint: string
@@ -44,6 +45,7 @@ const RemoveLiquidityPanel = ({
   formatInteger,
   formatValueAmount,
 }: RemoveLiquidityPanelProps) => {
+  const { isWaitlistActive } = useWaitlistStore()
   if (positionsLoading) {
     return (
       <div className="flex h-full flex-col gap-2 rounded-xl border border-border/40 p-2 text-xs">
@@ -148,7 +150,11 @@ const RemoveLiquidityPanel = ({
                   {removingMint === position.positionMint && (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}
-                  {removingMint === position.positionMint ? 'Removing Liquidity…' : 'Remove Liquidity'}
+                  {isWaitlistActive 
+                    ? 'Join Waitlist' 
+                    : (removingMint === position.positionMint 
+                      ? 'Removing Liquidity…' 
+                      : 'Remove Liquidity')}
                 </Button>
               </Card>
             )

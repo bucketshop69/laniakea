@@ -25,6 +25,8 @@ import {
 import { useDriftPositionsStore as usePositionsStoreRef } from '../state/driftPositionsStore';
 import DriftDepositModal from './DriftDepositModal';
 import DriftPositions from './DriftPositions';
+import { handleWaitlistAction } from '@/lib/waitlistHandler';
+import { useWaitlistStore } from '@/store/waitlistStore';
 
 type PositionDirection = 'long' | 'short';
 type OrderType = 'market' | 'limit';
@@ -156,6 +158,13 @@ const DriftTrade = () => {
   }, [direction, orderType, size, sizeMode, limitPrice, selectedMarketIndex, clientReady, wallet.connected, userExists]);
 
   const handleTrade = async () => {
+    // Waitlist middleware - check if functionality is on waitlist before proceeding
+    const { isWaitlistActive } = useWaitlistStore.getState();
+    if (isWaitlistActive) {
+      handleWaitlistAction('trading', wallet.publicKey?.toString() || null);
+      return; // Stop execution and show waitlist modal instead
+    }
+
     if (!wallet.connected || readOnly || !clientReady || userExists !== true) {
       console.warn('Trading not ready: connect wallet, initialize Drift user, or wait for session.');
       return;
