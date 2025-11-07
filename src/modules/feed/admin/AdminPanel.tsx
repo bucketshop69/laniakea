@@ -99,7 +99,7 @@ const AdminPanel: React.FC = () => {
                   title: formData.title,
                   description: formData.description || null,
                   timestamp: formData.timestamp,
-                  category: categories && categories.length > 0 ? categories : [],
+                  category: categories || [],
                   asset_related_to: formData.asset_related_to || null,
                   link: formData.source || null,
                   created_at: new Date().toISOString(),

@@ -29,17 +29,31 @@ export const useFeedItems = (
       setLoading(true);
       const items = await feedService.getAllFeedItems();
       // Convert feedItems to admin format including the categories
-      const adminItems: AdminFeedItem[] = items.map((item: any) => ({
-        id: item.id,
-        title: item.title,
-        description: item.description || '',
-        timestamp: item.timestamp,
-        category: Array.isArray(item.category) ? item.category : item.category?.split(',') || [],
-        asset_related_to: item.asset_related_to || '',
-        source: item.link || '',
-        impact: 'neutral', // Default impact
-        published: true,
-      }));
+      const adminItems: AdminFeedItem[] = items.map((item: any) => {
+        // Handle the case where category might be a comma-separated string from the DB
+        const categoryAsArray = (item.category as unknown) as string[] | string;
+        
+        let categoryArray: string[];
+        if (Array.isArray(categoryAsArray)) {
+          categoryArray = categoryAsArray;
+        } else if (typeof categoryAsArray === 'string') {
+          categoryArray = categoryAsArray.split(',').filter((c: string) => c.trim());
+        } else {
+          categoryArray = [];
+        }
+        
+        return {
+          id: item.id,
+          title: item.title,
+          description: item.description || '',
+          timestamp: item.timestamp,
+          category: categoryArray,
+          asset_related_to: item.asset_related_to || '',
+          source: item.link || '',
+          impact: 'neutral', // Default impact
+          published: true,
+        };
+      });
       setFeedItems(adminItems);
     } catch (err) {
       console.error('Error loading feed items:', err);
@@ -63,18 +77,32 @@ export const useFeedItems = (
         const items = await feedService.getAllFeedItems();
         
         // Adapt the items to our AdminFeedItem interface
-        const adminItems: AdminFeedItem[] = items.map((item: any) => ({
-          id: item.id,
-          title: item.title,
-          description: item.description || '',
-          timestamp: item.timestamp,
-          category: Array.isArray(item.category) ? item.category : item.category?.split(',') || [],
-          asset_related_to: item.asset_related_to || '',
-          source: item.link || '',
-          // Note: The original feed item doesn't have impact, so we default to neutral
-          impact: 'neutral',
-          published: true, // Assuming all items from feed are published
-        }));
+        const adminItems: AdminFeedItem[] = items.map((item: any) => {
+          // Handle the case where category might be a comma-separated string from the DB
+          const categoryAsArray = (item.category as unknown) as string[] | string;
+          
+          let categoryArray: string[];
+          if (Array.isArray(categoryAsArray)) {
+            categoryArray = categoryAsArray;
+          } else if (typeof categoryAsArray === 'string') {
+            categoryArray = categoryAsArray.split(',').filter((c: string) => c.trim());
+          } else {
+            categoryArray = [];
+          }
+          
+          return {
+            id: item.id,
+            title: item.title,
+            description: item.description || '',
+            timestamp: item.timestamp,
+            category: categoryArray,
+            asset_related_to: item.asset_related_to || '',
+            source: item.link || '',
+            // Note: The original feed item doesn't have impact, so we default to neutral
+            impact: 'neutral',
+            published: true, // Assuming all items from feed are published
+          };
+        });
         
         setFeedItems(adminItems);
       } catch (err) {

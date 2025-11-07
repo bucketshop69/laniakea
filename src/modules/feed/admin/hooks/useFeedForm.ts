@@ -295,19 +295,36 @@ export const useFeedForm = (
   };
 
   const loadItemForEdit = (item: AdminFeedItem) => {
+    // Since AdminFeedItem.category is defined as string[], we need to handle the case where 
+    // the actual data coming from the database may be stored as a string
+    const categoryAsArray = (item.category as unknown) as string[] | string;
+    
+    let categoryArray: string[];
+    if (Array.isArray(categoryAsArray)) {
+      categoryArray = categoryAsArray;
+    } else if (typeof categoryAsArray === 'string') {
+      categoryArray = categoryAsArray.split(',').filter(c => c.trim());
+    } else {
+      categoryArray = [];
+    }
+    
     setFormDataLocal({
       title: item.title,
       description: item.description,
       asset_related_to: item.asset_related_to,
       timestamp: item.timestamp.slice(0, 16), // Format as YYYY-MM-DDTHH:mm
-      category: Array.isArray(item.category) ? item.category.join(',') : item.category, // Convert array back to comma-separated string for form
+      category: Array.isArray(categoryAsArray) 
+        ? categoryAsArray.join(',') 
+        : typeof categoryAsArray === 'string' 
+          ? categoryAsArray 
+          : '', // Convert array back to comma-separated string for form
       source: item.source || '',
       impact: item.impact || 'neutral',
       published: item.published || false,
       error: null
     });
     // Ensure categories is an array
-    setCategories(Array.isArray(item.category) ? item.category : item.category?.split(',') || []);
+    setCategories(categoryArray);
     setEditingItemId(item.id || null);
   };
 
