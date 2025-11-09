@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { PlusCircle, MinusCircle, Settings, User, Rss, ArrowRight } from 'lucide-react';
+import { PlusCircle, MinusCircle, Settings, User, Rss, ArrowRight, Users } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,7 @@ import { WalletButton } from './WalletButton';
 import { FeedPanel } from '@/modules/feed/components';
 import { ProfilePanel } from '@/modules/profile';
 import Stats from '@/components/Stats';
+import { useWaitlistStore } from '@/store/waitlistStore';
 
 interface Pool {
     pair: string;
@@ -126,8 +127,11 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
         <div className="col-span-12 md:col-start-8 md:col-span-5 w-full h-full md:min-h-[600px]">
             <Card className="flex flex-col h-full rounded-none md:rounded-lg overflow-hidden md:overflow-visible">
                 <div className="grid grid-cols-12 gap-1 p-1">
-                    <div className="col-span-10">
+                    <div className="col-span-9">
                         <DappSelector dapps={dapps} selectedId={selectedDapp} onSelect={handleDappSelection} />
+                    </div>
+                    <div className="col-span-1 flex items-center justify-center">
+                        <JoinWaitlistButton />
                     </div>
                     <div className="col-span-2 flex items-center justify-center">
                         <WalletButton />
@@ -367,6 +371,23 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
 
             </Card>
         </div >
+    );
+};
+
+const JoinWaitlistButton: React.FC = () => {
+    const { openWaitlistModal } = useWaitlistStore();
+
+    return (
+        <Button
+            variant="ghost"
+            size="sm"
+            className="gap-1"
+            onClick={() => openWaitlistModal(null)}
+            title="Join Waitlist"
+        >
+            {/* <Users size={16} /> */}
+            <span className="hidden md:inline text-xs">Join</span>
+        </Button>
     );
 };
 
