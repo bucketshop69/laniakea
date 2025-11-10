@@ -7,8 +7,17 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "dev:api": "pnpm --filter api dev",
+    "dev:facilitator": "pnpm --filter facilitator dev",
+    "demo": "pnpm --filter client-demo start",
+    "install:all": "pnpm install && pnpm --recursive install"
   },
+  "workspaces": [
+    "api",
+    "facilitator",
+    "client-demo"
+  ],
   "dependencies": {
     "@drift-labs/sdk": "^2.142.0-beta.13",
     "@meteora-ag/dlmm": "^1.7.5",

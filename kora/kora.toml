@@ -1,0 +1,33 @@
+# Kora Configuration File
+
+[network]
+cluster = "devnet"
+
+[kora]
+port = 8080
+host = "0.0.0.0"
+
+[kora.auth]
+api_key = "kora_facilitator_api_key_example"
+
+[validation.fee_payer_policy]
+allow_sol_transfers = false
+allow_spl_token_transfers = true
+max_compute_units = 1_000_000
+allow_unknown_programs = false
+
+# Allow payment tokens
+allowed_tokens = [
+    "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU", # USDC devnet
+]
+
+# Allow programs that might be used in x402 payments
+allowed_programs = [
+    "11111111111111111111111111111111",             # System Program
+    "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",  # Token Program
+    "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL", # Associated Token Program
+    "ComputeBudget111111111111111111111111111111",  # Compute Budget Program
+]
+
+[signers]
+# Signer configuration is in signers.toml

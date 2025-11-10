@@ -1,0 +1,28 @@
+{
+  "name": "@laniakea/facilitator",
+  "version": "1.0.0",
+  "description": "x402 facilitator service for Kora integration",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@kora/sdk": "file:../kora-source/sdks/ts",
+    "@solana/web3.js": "^1.98.4",
+    "@types/axios": "^0.14.4",
+    "@types/bn.js": "^5.2.0",
+    "axios": "^1.13.2",
+    "bn.js": "^5.2.2",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^4.21.1"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.9.0",
+    "tsx": "^4.19.2",
+    "typescript": "~5.8.3"
+  }
+}
