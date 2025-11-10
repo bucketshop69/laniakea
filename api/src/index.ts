@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import walletRouter from './routes/wallet';
 
 dotenv.config();
 
@@ -9,6 +10,9 @@ const PORT = process.env.PORT || 4021;
 
 app.use(cors());
 app.use(express.json());
+
+// API routes
+app.use('/api', walletRouter);
 
 // Simple hello world endpoint to verify setup
 app.get('/', (req, res) => {

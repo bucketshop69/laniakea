@@ -276,42 +276,46 @@ laniakea/
 
 ### Milestone 4: Protected API with Wallet Overview
 
-#### 4.1 Setup API Project Structure
+#### 4.1 Setup API Project Structure & Dependencies
 - [ ] Install x402 packages in API workspace:
   - Research available x402 middleware packages
   - Install x402-express or equivalent middleware
   - Add any required x402 types/utilities
-- [ ] Create service structure:
-  - [ ] `src/services/walletService.ts` - Wallet data aggregation
-  - [ ] `src/services/userInterestsService.ts` - User interests from feed
-  - [ ] `src/routes/wallet.ts` - Wallet overview routes
-  - [ ] `src/types/wallet.ts` - Type definitions
-  - [ ] `src/middleware/x402.ts` - Payment middleware configuration
+- [ ] Install additional dependencies:
+  - [ ] `axios` or `node-fetch` for HTTP requests
+  - [ ] `@supabase/supabase-js` for database (reuse existing)
+- [ ] Create directory structure:
+  - [ ] `src/services/` directory
+  - [ ] `src/routes/` directory
+  - [ ] `src/types/` directory
+  - [ ] `src/middleware/` directory
 
-#### 4.2 Integrate Vybe API for Wallet Data
-- [ ] Copy/adapt existing profileService from frontend:
-  - [ ] Copy `src/modules/profile/services/profileService.ts` logic
-  - [ ] Create `api/src/services/vybeService.ts`
-  - [ ] Implement `fetchWalletBalance()` function
-  - [ ] Implement `transformVybeResponse()` function
-  - [ ] Add VYBE_API_KEY environment variable handling
-  - [ ] Add error handling for API failures
-  - [ ] Test Vybe API integration independently
+#### 4.2 Adapt Vybe Service (Copy from Frontend)
+- [ ] **Copy existing code** from `src/modules/profile/services/profileService.ts`:
+  - [ ] Copy entire file to `api/src/services/vybeService.ts`
+  - [ ] Replace `import.meta.env` with `process.env`
+  - [ ] Replace browser `fetch` with `axios` or `node-fetch`
+  - [ ] Update imports for Node.js environment
+  - [ ] Keep existing functions as-is:
+    - `fetchWalletBalance()` ✓
+    - `transformVybeResponse()` ✓
+    - `getProfileOverview()` ✓
+  - [ ] Test with sample wallet address
 
-#### 4.3 Implement User Interests Service
-- [ ] Create `userInterestsService.ts` for feed data:
-  - [ ] Set up Supabase client connection
-  - [ ] Implement `getUserInterests(walletAddress)`:
-    - Query feed_items for user interactions
-    - Extract asset preferences (most viewed/interacted)
-    - Extract category preferences
-    - Calculate interest scores
-  - [ ] Implement data aggregation:
-    - Top assets user is interested in
-    - Top categories user follows
-    - Recent activity summary
-  - [ ] Add caching strategy (optional but recommended)
-  - [ ] Add error handling for database failures
+#### 4.3 Adapt Feed Service (Copy from Frontend)
+- [ ] **Copy Supabase setup** from `src/modules/feed/services/feedService.ts`:
+  - [ ] Copy Supabase client initialization to `api/src/services/supabaseClient.ts`
+  - [ ] Update environment variables for Node.js
+- [ ] Create `api/src/services/userInterestsService.ts`:
+  - [ ] Import Supabase client
+  - [ ] **Adapt existing query methods** for user interests:
+    - Copy pattern from `getFeedItemsByAsset()`
+    - Create `getUserInterestsByWallet(walletAddress)`:
+      - Query feed_items table (reuse existing table structure)
+      - Group by asset/category
+      - Return top interests
+  - [ ] Keep it simple - reuse existing feed query patterns
+  - [ ] Add basic error handling (copy from feedService)
 
 #### 4.4 Create Wallet Overview Service
 - [ ] Create `walletService.ts` to combine data:
@@ -384,19 +388,231 @@ laniakea/
   - Example usage
 
 ### Milestone 5: AI Agent Demo Client
-- Build client simulation script
-- Implement x402 fetch wrapper for automatic payments
-- Create demo flow: fail without payment → succeed with payment
-- Format and display combined wallet overview response
-- Add transaction explorer links for verification
+
+#### 5.1 Setup Client Dependencies & Structure
+- [ ] Install required packages in client-demo workspace:
+  - [ ] `@solana/web3.js` (already installed)
+  - [ ] `axios` for HTTP requests
+  - [ ] `chalk` for colored console output (already installed)
+  - [ ] `bs58` for base58 encoding
+- [ ] Create file structure:
+  - [ ] `src/index.ts` - Main demo script
+  - [ ] `src/x402Client.ts` - x402 payment wrapper
+  - [ ] `src/utils/solana.ts` - Solana transaction helpers
+  - [ ] `src/config.ts` - Configuration constants
+
+#### 5.2 Implement Solana Transaction Utilities
+- [ ] Create `src/utils/solana.ts`:
+  - [ ] Function to load keypair from private key (env)
+  - [ ] Function to create payment transaction:
+    - Create transfer instruction with payment amount
+    - Set fee payer
+    - Add recent blockhash
+  - [ ] Function to sign transaction with payer keypair
+  - [ ] Function to serialize transaction for x402 headers
+  - [ ] Add proper error handling
+
+#### 5.3 Implement x402 Payment Client
+- [ ] Create `src/x402Client.ts`:
+  - [ ] **x402FetchWithPayment()** function:
+    - First, try request without payment (expect 422/402)
+    - Parse payment requirements from response
+    - Create payment transaction with facilitator info
+    - Sign transaction with payer keypair
+    - Retry request with payment headers:
+      - `x-payment-token`: payment token
+      - `x-payment-tx`: base64 transaction
+    - Return successful response
+  - [ ] Helper: `parsePaymentRequirements()` - extract from 422 response
+  - [ ] Helper: `createPaymentTransaction()` - build Solana tx
+  - [ ] Helper: `addPaymentHeaders()` - attach to request
+  - [ ] Add comprehensive logging for each step
+
+#### 5.4 Create Configuration
+- [ ] Create `src/config.ts`:
+  - [ ] Load from environment variables:
+    - `PAYER_PRIVATE_KEY` - AI agent's keypair
+    - `API_URL` - Protected API endpoint
+    - `FACILITATOR_URL` - Facilitator service
+    - `NETWORK` - Solana network (devnet)
+  - [ ] Define test wallet addresses for demo
+  - [ ] Define test user IDs
+  - [ ] Add validation for required config
+
+#### 5.5 Implement Demo Flow Script
+- [ ] Create main demo script in `src/index.ts`:
+  - [ ] **Step 1: Introduction**
+    - Display demo header with chalk
+    - Show configuration (network, addresses)
+    - Explain what will happen
+  - [ ] **Step 2: Request without payment**
+    - Make GET request to `/api/wallet_overview`
+    - Expect 422 Payment Required
+    - Display payment requirements
+    - Show that access is denied
+  - [ ] **Step 3: Request with x402 payment**
+    - Use `x402FetchWithPayment()` to make paid request
+    - Show payment transaction being created
+    - Show transaction signature
+    - Display success message
+  - [ ] **Step 4: Display wallet overview response**
+    - Format and display wallet data
+    - Display user interests
+    - Display recommendations
+  - [ ] **Step 5: Show transaction on explorer**
+    - Generate Solana explorer link
+    - Display payment split verification link
+    - Show success summary
+
+#### 5.6 Add Visual Formatting
+- [ ] Use chalk for colored output:
+  - [ ] Blue for headers/sections
+  - [ ] Green for success messages
+  - [ ] Red for errors/payment required
+  - [ ] Yellow for warnings/info
+  - [ ] Cyan for data display
+- [ ] Create formatted output functions:
+  - [ ] `displayHeader()` - section headers
+  - [ ] `displayWalletData()` - format wallet info
+  - [ ] `displayInterests()` - format user interests
+  - [ ] `displayRecommendations()` - format recommendations
+  - [ ] `displayTransactionLink()` - Solana explorer link
+
+#### 5.7 Testing & Error Handling
+- [ ] Add error handling for common scenarios:
+  - [ ] Missing environment variables
+  - [ ] Invalid keypair
+  - [ ] API server not running
+  - [ ] Facilitator not running
+  - [ ] Kora not running
+  - [ ] Insufficient funds
+  - [ ] Network errors
+- [ ] Test the complete flow:
+  - [ ] Run with all services (Kora, Facilitator, API)
+  - [ ] Verify 422 response without payment
+  - [ ] Verify 200 response with payment
+  - [ ] Verify transaction on Solana explorer
+  - [ ] Verify payment splits on-chain
+- [ ] Create README with:
+  - [ ] Prerequisites
+  - [ ] Environment setup
+  - [ ] How to run the demo
+  - [ ] Expected output
 
 ### Milestone 6: Integration Testing & Demo Prep
-- End-to-end testing of full payment flow
-- Verify payment splitting on-chain
-- Create demo script for presentation
-- Document terminal setup (4 terminals: Kora, Facilitator, API, Client)
-- Prepare Solana explorer screenshots/links
-- Test presentation flow
+
+#### 6.1 Prepare Environment & Services
+- [ ] Verify all environment variables are set in root `.env`:
+  - [ ] KORA_SIGNER_ADDRESS
+  - [ ] KORA_SIGNER_PRIVATE_KEY
+  - [ ] PAYER_ADDRESS
+  - [ ] PAYER_PRIVATE_KEY
+  - [ ] KORA_API_KEY
+  - [ ] VYBE_API_KEY
+  - [ ] FACILITATOR_URL
+  - [ ] Network settings
+- [ ] Fund accounts if needed:
+  - [ ] Check Kora signer SOL balance
+  - [ ] Check payer USDC balance
+  - [ ] Airdrop more if low
+
+#### 6.2 Test Individual Services
+- [ ] **Terminal 1: Test Kora RPC**
+  - [ ] Start Kora: `cd kora-source && kora start --config ../kora/kora.toml --signers ../kora/signers.toml`
+  - [ ] Verify logs show "RPC server started on 0.0.0.0:8080"
+  - [ ] Test health: `curl http://localhost:8080/health`
+  - [ ] Keep running
+- [ ] **Terminal 2: Test Facilitator**
+  - [ ] Start: `pnpm --filter facilitator dev`
+  - [ ] Verify: "Facilitator service running on port 3000"
+  - [ ] Test /supported: `curl http://localhost:3000/supported`
+  - [ ] Keep running
+- [ ] **Terminal 3: Test API**
+  - [ ] Start: `pnpm --filter api dev`
+  - [ ] Verify: "API server running on port 4021"
+  - [ ] Test health: `curl http://localhost:4021/`
+  - [ ] Test without payment: `curl http://localhost:4021/api/wallet_overview?wallet_address=test&user_id=test`
+  - [ ] Expect 422 Payment Required
+  - [ ] Keep running
+
+#### 6.3 End-to-End Payment Flow Test
+- [ ] **Terminal 4: Run Client Demo**
+  - [ ] Run: `pnpm --filter client-demo start`
+  - [ ] Verify Step 1: Payment discovery works
+  - [ ] Verify Step 2: Transaction builds with splits
+  - [ ] Verify Step 3: Transaction verification succeeds
+  - [ ] Verify Step 4: Transaction settlement succeeds
+  - [ ] Verify Step 5: Protected resource accessed
+  - [ ] Capture transaction signature from output
+  - [ ] Note any errors or failures
+
+#### 6.4 Verify On-Chain Payment Splits
+- [ ] Open Solana Explorer (devnet):
+  - [ ] Go to: `https://explorer.solana.com/?cluster=devnet`
+  - [ ] Search for transaction signature from client demo
+  - [ ] Verify transaction exists and confirmed
+- [ ] Check payment splits:
+  - [ ] Verify 3 transfer instructions in transaction
+  - [ ] Verify amounts match configured percentages:
+    - 50% to platform recipient
+    - 30% to data provider
+    - 20% to referral recipient
+  - [ ] Take screenshot for demo
+
+#### 6.5 Create Demo Run Script
+- [ ] Create `run-demo.sh` in root:
+  - [ ] Script to check if all services are running
+  - [ ] Display status of each service
+  - [ ] Instructions to start each service in order
+  - [ ] Wait commands between starts
+  - [ ] Final command to run client demo
+- [ ] Test the script end-to-end
+- [ ] Make it executable: `chmod +x run-demo.sh`
+
+#### 6.6 Document Demo Flow
+- [ ] Create `DEMO.md` in root:
+  - [ ] **Prerequisites section**:
+    - Services running (Kora, Facilitator, API)
+    - Accounts funded
+    - Environment configured
+  - [ ] **Running the Demo section**:
+    - Step-by-step terminal commands
+    - Expected output for each step
+    - What to look for (payment splits, transaction signature)
+  - [ ] **Troubleshooting section**:
+    - Common errors and fixes
+    - How to check service status
+    - How to restart services
+  - [ ] **Architecture Diagram**:
+    - ASCII diagram of component flow
+    - Ports and connections
+
+#### 6.7 Prepare Presentation Materials
+- [ ] Create presentation flow document:
+  - [ ] 1. Introduction (30 sec)
+    - Problem: AI agents need to autonomously pay for APIs
+    - Solution: x402 + Kora + Payment Splitting
+  - [ ] 2. Architecture Overview (60 sec)
+    - Show component diagram
+    - Explain each layer
+  - [ ] 3. Live Demo (2 min)
+    - Show all 4 terminals
+    - Run client demo
+    - Explain each step as it happens
+  - [ ] 4. Payment Splits Verification (60 sec)
+    - Open Solana Explorer
+    - Show transaction with splits
+    - Highlight payment distribution
+  - [ ] 5. Key Features (30 sec)
+    - Autonomous payments
+    - Gasless transactions
+    - Payment splitting
+- [ ] Collect demo artifacts:
+  - [ ] Screenshot: All 4 terminals running
+  - [ ] Screenshot: Client demo output
+  - [ ] Screenshot: Solana Explorer with splits
+  - [ ] Transaction signature example
+- [ ] Prepare talking points document
 
 ---
 
