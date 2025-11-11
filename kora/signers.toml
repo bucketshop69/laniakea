@@ -1,4 +1,6 @@
-# Kora Signers Configuration
+[signer_pool]
+name = "default_pool"
+strategy = "round_robin"
 
 [[signers]]
 name = "main_signer"

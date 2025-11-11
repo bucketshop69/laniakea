@@ -614,6 +614,236 @@ laniakea/
   - [ ] Transaction signature example
 - [ ] Prepare talking points document
 
+### Milestone 7: X402 Demo UI Integration (Full Visual Demo)
+
+#### 7.1 Create X402 Demo Route & Layout
+- [ ] Add new route `/x402-demo` to React app
+- [ ] Create base layout component `X402DemoPage.tsx`:
+  - [ ] Hero section with title and description
+  - [ ] Live demo status indicator
+  - [ ] Grid layout for demo components
+  - [ ] Responsive design using existing Tailwind setup
+- [ ] Add navigation link in main menu/sidebar
+
+#### 7.2 AI Agent Visualization Component
+- [ ] Create `AIAgentCard.tsx`:
+  - [ ] Agent avatar/icon (robot icon from lucide-react)
+  - [ ] Agent name and description
+  - [ ] Current action status display:
+    - "Discovering payment requirements..."
+    - "Building transaction..."
+    - "Processing payment..."
+    - "Accessing data..."
+  - [ ] Animated loading states
+  - [ ] Success/error indicators
+- [ ] Add agent persona data (name, purpose, wallet address)
+
+#### 7.3 Payment Flow Visualization
+- [ ] Create `PaymentFlowViz.tsx`:
+  - [ ] Step-by-step flow diagram:
+    1. Discovery (API call)
+    2. Transaction Build (with splits)
+    3. Verification (Facilitator)
+    4. Settlement (Kora → Solana)
+    5. Access Granted
+  - [ ] Progress indicator showing current step
+  - [ ] Animated transitions between steps
+  - [ ] Each step shows:
+    - Icon
+    - Status (pending/in-progress/complete)
+    - Time taken
+    - Details (expandable)
+- [ ] Use Radix UI Tabs or Stepper component
+
+#### 7.4 Payment Split Visualization
+- [ ] Create `PaymentSplitChart.tsx`:
+  - [ ] Pie chart showing split percentages:
+    - Platform: 50% (primary color)
+    - Data Provider: 30% (secondary color)
+    - Referral: 20% (accent color)
+  - [ ] Use recharts library (already in dependencies)
+  - [ ] Animated entry animation
+  - [ ] Show actual amounts in USDC/SOL
+  - [ ] List view below chart with:
+    - Recipient address (truncated)
+    - Percentage
+    - Amount
+    - Link to Solana Explorer for each recipient
+
+#### 7.5 Live Transaction Component
+- [ ] Create `LiveTransactionCard.tsx`:
+  - [ ] Transaction status badge:
+    - Pending (yellow)
+    - Confirming (blue)
+    - Confirmed (green)
+  - [ ] Transaction signature display (copy button)
+  - [ ] Link to Solana Explorer
+  - [ ] Transaction details:
+    - Block height
+    - Confirmation time
+    - Fee paid
+    - Number of instructions
+  - [ ] Real-time status updates using polling or WebSocket
+  - [ ] Success animation when confirmed
+
+#### 7.6 Wallet Overview Result Display
+- [ ] Create `WalletOverviewResult.tsx`:
+  - [ ] Use existing `ProfileOverview` component style
+  - [ ] Display wallet data:
+    - Total value
+    - Token count
+    - 24h change
+  - [ ] Display user interests:
+    - Top tokens
+    - Top protocols
+    - Recent activity
+  - [ ] Display recommendations
+  - [ ] "Data accessed via x402 payment" badge
+  - [ ] Fade-in animation when data loads
+
+#### 7.7 Integration & State Management
+- [ ] Create `useX402Demo` hook:
+  - [ ] State management for demo flow
+  - [ ] Functions to trigger demo steps
+  - [ ] API calls to backend services
+  - [ ] Real-time status updates
+- [ ] Connect to actual backend:
+  - [ ] Call API endpoint (localhost:4021)
+  - [ ] Call facilitator (localhost:3000)
+  - [ ] Get real transaction signatures
+- [ ] Add demo controls:
+  - [ ] "Start Demo" button
+  - [ ] "Reset" button
+  - [ ] Auto-run toggle
+  - [ ] Speed control (optional)
+
+### Milestone 8: Payment History & User Management
+
+#### 8.1 Payment History Data Layer
+- [ ] Create Supabase table: `x402_payments`:
+  - [ ] id (uuid, primary key)
+  - [ ] user_id (uuid, foreign key)
+  - [ ] transaction_signature (text)
+  - [ ] endpoint_accessed (text)
+  - [ ] amount_paid (bigint)
+  - [ ] token_used (text)
+  - [ ] payment_splits (jsonb)
+  - [ ] status (text: pending/confirmed/failed)
+  - [ ] created_at (timestamp)
+  - [ ] confirmed_at (timestamp)
+- [ ] Create API endpoint: `GET /api/payments/history`
+- [ ] Create service: `paymentHistoryService.ts`
+
+#### 8.2 Payment History UI
+- [ ] Create route `/payments/history`
+- [ ] Create `PaymentHistoryPage.tsx`:
+  - [ ] Table view of all payments:
+    - Date/Time
+    - Endpoint
+    - Amount
+    - Token
+    - Status
+    - Transaction link
+  - [ ] Filters:
+    - Date range picker
+    - Status filter
+    - Token filter
+    - Endpoint filter
+  - [ ] Search by transaction signature
+  - [ ] Pagination
+- [ ] Create `PaymentHistoryCard.tsx`:
+  - [ ] Individual payment card for mobile
+  - [ ] Expandable details
+  - [ ] Payment split breakdown
+- [ ] Add total stats:
+  - [ ] Total payments made
+  - [ ] Total amount spent
+  - [ ] Most used endpoints
+  - [ ] Favorite tokens
+
+#### 8.3 X402 Settings Data Layer
+- [ ] Create Supabase table: `user_x402_settings`:
+  - [ ] user_id (uuid, primary key)
+  - [ ] data_sharing_enabled (boolean)
+  - [ ] accepted_tokens (jsonb array)
+  - [ ] privacy_level (text: public/private/selective)
+  - [ ] allowed_endpoints (jsonb array)
+  - [ ] rate_limits (jsonb)
+  - [ ] updated_at (timestamp)
+- [ ] Create API endpoints:
+  - [ ] `GET /api/x402/settings`
+  - [ ] `PUT /api/x402/settings`
+- [ ] Create service: `x402SettingsService.ts`
+
+#### 8.4 X402 Settings UI - Data Sharing
+- [ ] Create route `/settings/x402`
+- [ ] Create `X402SettingsPage.tsx`:
+  - [ ] Tabs: Data Sharing, Token Settings, Privacy
+- [ ] **Data Sharing Tab**:
+  - [ ] Master toggle: "Enable x402 Data Sharing"
+  - [ ] Description explaining what data is shared
+  - [ ] Granular controls:
+    - [ ] Share wallet balance (toggle)
+    - [ ] Share user interests (toggle)
+    - [ ] Share transaction history (toggle)
+    - [ ] Share recommendations (toggle)
+  - [ ] Preview: "What AI agents will see"
+  - [ ] Save button with confirmation
+
+#### 8.5 X402 Settings UI - Token Management
+- [ ] **Token Settings Tab**:
+  - [ ] "Accepted Payment Tokens" section
+  - [ ] List of available tokens:
+    - [ ] SOL (checkbox)
+    - [ ] USDC (checkbox)
+    - [ ] Other SPL tokens (checkbox)
+  - [ ] For each token:
+    - [ ] Enable/disable toggle
+    - [ ] Minimum payment amount input
+    - [ ] Token icon
+  - [ ] "Add Custom Token" button:
+    - [ ] Token mint address input
+    - [ ] Validation
+    - [ ] Add to accepted list
+  - [ ] Default token selector
+  - [ ] Price settings:
+    - [ ] Price per API call
+    - [ ] Bulk pricing (discount for multiple calls)
+
+#### 8.6 X402 Settings UI - Privacy & Limits
+- [ ] **Privacy Tab**:
+  - [ ] Privacy level selector:
+    - [ ] Public: Anyone can pay to access
+    - [ ] Private: Only approved addresses
+    - [ ] Selective: Whitelist specific endpoints
+  - [ ] Approved addresses list (if private):
+    - [ ] Add/remove addresses
+    - [ ] Address labels
+  - [ ] Endpoint permissions:
+    - [ ] Which endpoints can be accessed via x402
+    - [ ] Per-endpoint pricing override
+  - [ ] Rate limiting:
+    - [ ] Max requests per hour
+    - [ ] Max requests per day
+    - [ ] Cooldown period
+  - [ ] Blacklist:
+    - [ ] Block specific addresses
+    - [ ] Reason for blocking
+
+#### 8.7 Real-Time Updates & Notifications
+- [ ] Add notification system:
+  - [ ] Toast notifications for new payments
+  - [ ] Payment received notification
+  - [ ] Settings changed confirmation
+- [ ] Real-time payment tracking:
+  - [ ] WebSocket or polling for live updates
+  - [ ] Update payment history without refresh
+  - [ ] Show pending → confirmed transitions
+- [ ] Activity feed:
+  - [ ] Recent x402 activity
+  - [ ] Who accessed your data
+  - [ ] Earnings summary
+
 ---
 
 ## Success Criteria
@@ -626,11 +856,23 @@ laniakea/
 ---
 
 ## Estimated Timeline
-- **Milestone 1**: 1-2 hours
-- **Milestone 2**: 1-2 hours
-- **Milestone 3**: 3-4 hours (most complex)
-- **Milestone 4**: 2-3 hours
-- **Milestone 5**: 1-2 hours
-- **Milestone 6**: 1-2 hours
 
-**Total**: ~10-15 hours (1-2 days of focused work)
+**Phase 1: Core Infrastructure (Milestones 1-3)**
+- **Milestone 1**: 1-2 hours - Project structure
+- **Milestone 2**: 1-2 hours - Kora setup
+- **Milestone 3**: 3-4 hours - Facilitator with payment splitting
+
+**Phase 2: API & Client (Milestones 4-5)**
+- **Milestone 4**: 2-3 hours - Protected API
+- **Milestone 5**: 1-2 hours - Client demo
+
+**Phase 3: Demo Preparation (Milestone 6)**
+- **Milestone 6**: 1-2 hours - Integration testing & demo prep
+
+**Phase 4: UI Integration (Milestones 7-8) - NEW!**
+- **Milestone 7**: 3-4 hours - Visual demo in React UI
+- **Milestone 8**: 4-5 hours - Payment history & settings
+
+**Milestones 1-6 Total**: ~10-15 hours (✅ COMPLETED)
+**Milestones 7-8 Total**: ~7-9 hours (NEW features)
+**Grand Total**: ~17-24 hours (2-3 days of focused work)

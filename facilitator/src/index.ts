@@ -4,6 +4,8 @@ import dotenv from 'dotenv';
 import { supportedController } from './controllers/supportedController';
 import { verifyController } from './controllers/verifyController';
 import { settleController } from './controllers/settleController';
+import { getPaymentInstructionController } from './controllers/getPaymentInstructionController';
+import { getKoraSignerController } from './controllers/getKoraSignerController';
 
 dotenv.config();
 
@@ -22,6 +24,8 @@ app.get('/', (req, res) => {
 app.get('/supported', supportedController);
 app.post('/verify', verifyController);
 app.post('/settle', settleController);
+app.post('/get-payment-instruction', getPaymentInstructionController);
+app.get('/get-kora-signer', getKoraSignerController);
 
 app.listen(PORT, () => {
   console.log(`Facilitator service running on port ${PORT}`);

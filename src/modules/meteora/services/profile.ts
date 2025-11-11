@@ -129,7 +129,7 @@ export async function getAllUserPositions(
       tokenYMint: tokenY.publicKey.toString(),
       tokenXSymbol: 'Token X', // TODO: Get from token metadata
       tokenYSymbol: 'Token Y', // TODO: Get from token metadata
-      apy: lbPair.rewardInfos[0]?.feeApr ?? 0, // TODO: Calculate proper APY
+      apy: 0, // TODO: Calculate proper APY from rewardInfos
       tvl: 0, // TODO: Get from API or calculate
       binStep: lbPair.binStep,
       positions,

@@ -11,28 +11,12 @@ import { PaymentSettlementRequest, PaymentSettlementResponse } from '../types/x4
 export const settleController = async (req: Request, res: Response): Promise<void> => {
   try {
     // Extract the transaction and payment splits from the request body
-    const { transaction, payment_splits, payer } = req.body as PaymentSettlementRequest;
+    const { transaction } = req.body as PaymentSettlementRequest;
 
     if (!transaction) {
-      res.status(400).json({ 
-        error: 'Bad request', 
-        message: 'Transaction is required in request body' 
-      });
-      return;
-    }
-
-    if (!payment_splits || !Array.isArray(payment_splits) || payment_splits.length === 0) {
-      res.status(400).json({ 
-        error: 'Bad request', 
-        message: 'Payment splits are required and must be a non-empty array' 
-      });
-      return;
-    }
-
-    if (!payer) {
-      res.status(400).json({ 
-        error: 'Bad request', 
-        message: 'Payer is required for payment splitting' 
+      res.status(400).json({
+        error: 'Bad request',
+        message: 'Transaction is required in request body'
       });
       return;
     }
@@ -43,56 +27,25 @@ export const settleController = async (req: Request, res: Response): Promise<voi
       const transactionBuffer = Buffer.from(transaction, 'base64');
       solanaTransaction = Transaction.from(transactionBuffer);
     } catch (error) {
-      res.status(400).json({ 
-        error: 'Bad request', 
-        message: 'Invalid transaction format' 
+      res.status(400).json({
+        error: 'Bad request',
+        message: 'Invalid transaction format'
       });
       return;
     }
 
-    // Validate the payer address
-    let payerPublicKey: PublicKey;
-    try {
-      payerPublicKey = new PublicKey(payer);
-    } catch (error) {
-      res.status(400).json({ 
-        error: 'Bad request', 
-        message: 'Invalid payer address' 
-      });
-      return;
-    }
-
-    // Parse the payment splits
-    let parsedSplits: Array<{ recipient: PublicKey, amount: number }>;
-    try {
-      parsedSplits = payment_splits.map((split) => {
-        if (!split.recipient || !split.amount) {
-          throw new Error('Each payment split must have recipient and amount');
-        }
-        
-        return {
-          recipient: new PublicKey(split.recipient),
-          amount: Number(split.amount)
-        };
-      });
-    } catch (error) {
-      res.status(400).json({ 
-        error: 'Bad request', 
-        message: 'Invalid payment splits format' 
-      });
-      return;
-    }
-
-    // Add the payment splits to the transaction
-    const transactionWithSplits = PaymentSplittingUtil.addPaymentSplits(
-      solanaTransaction,
-      parsedSplits,
-      payerPublicKey
-    );
+    // Note: Payment splits are already included in the transaction from the frontend
+    // No need to add them again - just sign and send the transaction as-is
 
     // Submit the transaction via Kora service
     const koraService = new KoraService();
-    const signature = await koraService.signAndSendTransaction(transactionWithSplits);
+
+    console.log('Attempting to sign and send transaction via Kora...');
+    console.log('Transaction has', solanaTransaction.instructions.length, 'instructions');
+
+    const signature = await koraService.signAndSendTransaction(solanaTransaction);
+
+    console.log('Transaction settled successfully with signature:', signature);
 
     // Return the transaction signature
     const response: PaymentSettlementResponse = {
@@ -100,13 +53,16 @@ export const settleController = async (req: Request, res: Response): Promise<voi
       signature,
       message: 'Transaction settled successfully with payment splits'
     };
-    
+
     res.json(response);
   } catch (error) {
     console.error('Error in /settle endpoint:', error);
-    res.status(500).json({ 
-      error: 'Internal server error', 
-      message: 'Failed to settle transaction' 
+    console.error('Error details:', error instanceof Error ? error.message : String(error));
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    res.status(500).json({
+      error: 'Internal server error',
+      message: 'Failed to settle transaction',
+      details: error instanceof Error ? error.message : String(error)
     });
   }
 };

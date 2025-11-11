@@ -510,6 +510,10 @@ const computeSurface = () => {
     return 'admin';
   }
 
+  if (params.get('surface') === 'x402') {
+    return 'x402';
+  }
+
   if (params.get('surface') === 'landing') {
     return 'landing';
   }
@@ -523,6 +527,10 @@ const computeSurface = () => {
 
   if (pathname.startsWith('/admin')) {
     return 'admin';
+  }
+
+  if (pathname.startsWith('/x402')) {
+    return 'x402';
   }
 
   return 'landing';
@@ -619,6 +627,8 @@ const SpaceLiquidityPool = () => {
   );
 };
 
+import X402Demo from './modules/x402/components/X402Demo';
+
 const App = () => {
   const [surface] = useState(computeSurface);
 
@@ -626,6 +636,15 @@ const App = () => {
     return (
       <>
         <AdminPanel />
+        <WaitlistModal />
+      </>
+    );
+  }
+
+  if (surface === 'x402') {
+    return (
+      <>
+        <X402Demo />
         <WaitlistModal />
       </>
     );

@@ -1,5 +1,7 @@
 import { KoraClient } from '@kora/sdk';
-import { Transaction } from '@solana/web3.js';
+import { Transaction, Keypair } from '@solana/web3.js';
+import * as fs from 'fs';
+import * as path from 'path';
 
 /**
  * Service class to interact with the Kora RPC server
@@ -54,7 +56,7 @@ export class KoraService {
       const serializedTransaction = transaction.serialize({ requireAllSignatures: false });
       const base64Transaction = Buffer.from(serializedTransaction).toString('base64');
 
-      // Call the Kora RPC service to sign and send the transaction
+      // Use signAndSendTransaction to sign and send the transaction
       const response = await this.client.signAndSendTransaction({
         transaction: base64Transaction
       });
@@ -111,6 +113,57 @@ export class KoraService {
     } catch (error) {
       console.error('Error estimating transaction fee via Kora:', error);
       throw new Error(`Failed to estimate transaction fee via Kora: ${error}`);
+    }
+  }
+
+  /**
+   * Gets the payment instruction needed for Kora to co-sign the transaction
+   * @param transaction The base64-encoded transaction
+   * @param feeToken The token to use for fee payment
+   * @param sourceWallet The wallet that will pay the fee
+   * @returns Payment instruction details
+   */
+  async getPaymentInstruction(transaction: string, feeToken: string, sourceWallet: string) {
+    try {
+      const response = await this.client.getPaymentInstruction({
+        transaction,
+        fee_token: feeToken,
+        source_wallet: sourceWallet
+      });
+      return response;
+    } catch (error) {
+      console.error('Error getting payment instruction via Kora:', error);
+      throw new Error(`Failed to get payment instruction via Kora: ${error}`);
+    }
+  }
+
+  /**
+   * Gets the Kora signer's public key by reading the private key from .env
+   * @returns The Kora signer's public key address
+   */
+  async getKoraSignerPublicKey(): Promise<string> {
+    try {
+      // Read the private key from the kora .env file
+      const koraEnvPath = path.join(process.cwd(), '../kora/.env');
+
+      if (!fs.existsSync(koraEnvPath)) {
+        throw new Error(`Kora .env file not found at ${koraEnvPath}`);
+      }
+
+      const envContent = fs.readFileSync(koraEnvPath, 'utf-8');
+      const match = envContent.match(/KORA_SIGNER_PRIVATE_KEY="?\[([^\]]+)\]"?/);
+
+      if (!match) {
+        throw new Error('KORA_SIGNER_PRIVATE_KEY not found in kora/.env');
+      }
+
+      const privateKeyArray = JSON.parse(`[${match[1]}]`);
+      const keypair = Keypair.fromSecretKey(Uint8Array.from(privateKeyArray));
+
+      return keypair.publicKey.toBase58();
+    } catch (error) {
+      console.error('Error getting Kora signer public key:', error);
+      throw new Error(`Failed to get Kora signer public key: ${error}`);
     }
   }
 }

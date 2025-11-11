@@ -50,7 +50,7 @@ interface StatsProps {
     currentPool: Pool;
     chartData: ChartDataPoint[];
     className?: string;
-    chartHeight?: number | string;
+    chartHeight?: number | `${number}%` | undefined;
 }
 
 const chartColors = {

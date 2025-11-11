@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { PlusCircle, MinusCircle, Settings, User, Rss, ArrowRight, Users } from 'lucide-react';
+import { PlusCircle, MinusCircle, Settings, User, Rss, ArrowRight, Users, Copy, LogOut, User as UserIcon, Wallet } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,13 @@ import { FeedPanel } from '@/modules/feed/components';
 import { ProfilePanel } from '@/modules/profile';
 import Stats from '@/components/Stats';
 import { useWaitlistStore } from '@/store/waitlistStore';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from './ui/dropdown-menu';
+import { useWallet } from '@solana/wallet-adapter-react';
 
 interface Pool {
     pair: string;
@@ -123,18 +130,114 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
             void triggerMeteoraFetch({ force: true });
         }
     }, [selectedDapp, triggerSarosFetch, triggerMeteoraFetch]);
+    
+    // Wallet integration using the actual wallet system
+    const { connected, connecting, publicKey, disconnect, connect, wallet } = useWallet();
+    const [walletDropdownOpen, setWalletDropdownOpen] = useState(false);
+
+    const navigateToX402Demo = () => {
+        // Navigate to x402 demo page using the surface system
+        window.location.search = '?surface=x402';
+    };
+
+    const openSettings = () => {
+        // Handle user settings
+        console.log('User settings clicked');
+    };
+    
+    const handleConnect = async () => {
+        if (wallet) {
+            try {
+                await connect();
+            } catch (error) {
+                console.error('Wallet connection error:', error);
+            }
+        }
+    };
+
+    const handleCopyAddress = () => {
+        if (publicKey) {
+            navigator.clipboard.writeText(publicKey.toString());
+        }
+    };
+
+    const getWalletButtonText = () => {
+        if (connected && publicKey) {
+            return `${publicKey.toString().slice(0, 4)}...${publicKey.toString().slice(-4)}`;
+        }
+        if (connecting) {
+            return 'Connecting...';
+        }
+        return 'Connect';
+    };
+
     return (
         <div className="col-span-12 md:col-start-8 md:col-span-5 w-full h-full md:min-h-[600px]">
             <Card className="flex flex-col h-full rounded-none md:rounded-lg overflow-hidden md:overflow-visible">
                 <div className="grid grid-cols-12 gap-1 p-1">
-                    <div className="col-span-9">
+                    <div className="col-span-5">
                         <DappSelector dapps={dapps} selectedId={selectedDapp} onSelect={handleDappSelection} />
                     </div>
-                    <div className="col-span-1 flex items-center justify-center">
-                        <JoinWaitlistButton />
-                    </div>
-                    <div className="col-span-2 flex items-center justify-center">
-                        <WalletButton />
+                    <div className="col-span-7 flex items-center justify-end space-x-2">
+                        <div className="relative">
+                            <JoinWaitlistButton />
+                        </div>
+                        <div className="relative flex space-x-1">
+                            {/* Custom wallet dropdown */}
+                            <DropdownMenu open={walletDropdownOpen} onOpenChange={setWalletDropdownOpen}>
+                                <DropdownMenuTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="flex items-center gap-1"
+                                    >
+                                        <Wallet size={16} />
+                                        <span className="text-xs">{getWalletButtonText()}</span>
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-48">
+                                    {connected && publicKey && (
+                                        <>
+                                            <div className="p-2 border-b border-border">
+                                                <div className="flex items-center justify-between text-xs">
+                                                    <span className="truncate max-w-[140px]">
+                                                        {publicKey.toString()}
+                                                    </span>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={handleCopyAddress}
+                                                        className="h-6 w-6 p-0"
+                                                    >
+                                                        <Copy size={12} />
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                            <DropdownMenuItem onClick={navigateToX402Demo} className="gap-2">
+                                                <ArrowRight size={14} />
+                                                AI x402 Demo
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onClick={openSettings} className="gap-2">
+                                                <Settings size={14} />
+                                                Settings
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem 
+                                                onClick={disconnect} 
+                                                className="gap-2 text-destructive"
+                                            >
+                                                <LogOut size={14} />
+                                                Logout
+                                            </DropdownMenuItem>
+                                        </>
+                                    )}
+                                    {!connected && (
+                                        <DropdownMenuItem onClick={handleConnect}>
+                                            Connect Wallet
+                                        </DropdownMenuItem>
+                                    )}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
                     </div>
                 </div>
                 <Tabs value={mainTab} onValueChange={setMainTab} className="flex flex-col h-full">
@@ -154,7 +257,7 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
                             currentPool={currentPool}
                             chartData={chartData}
                             className="h-full"
-                            chartHeight="100%"
+                            chartHeight={"100%" as const}
                         />
                     </div>
                     <TabsContent value="manage" className="flex-1 px-1">
@@ -172,7 +275,7 @@ const ActionPanel: React.FC<ActionPanelProps> = ({
                                         Select Pool
                                     </label>
                                     <Select value={selectedPool} onValueChange={onSelectedPoolChange}>
-                                        <SelectTrigger className="w-full px-3 py-3 text-primary text-left flex items-center 
+                                        <SelectTrigger className="w-full px-3 py-3 text-primary text-left flex items-center
                                 justify-between hover:border-primary transition-all duration-300">
                                             <span className="text-sm ml-2">
                                                 {currentPool.apy} APY

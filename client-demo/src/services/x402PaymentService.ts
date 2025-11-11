@@ -3,7 +3,9 @@ import {
   X402PaymentRequirement, 
   X402VerificationResponse, 
   X402SettlementResponse,
-  PaymentConfig 
+  PaymentConfig,
+  X402PaymentInstructionRequest,
+  X402PaymentInstructionResponse
 } from '../types/x402';
 import { Transaction, PublicKey, Connection, Keypair, SystemProgram } from '@solana/web3.js';
 
@@ -17,6 +19,77 @@ export class X402PaymentService {
   constructor(config: PaymentConfig) {
     this.facilitatorUrl = config.facilitatorUrl;
     this.apiEndpoint = config.apiEndpoint;
+  }
+
+  /**
+   * Get payment instruction from the facilitator
+   * @param transaction The transaction to get payment instruction for
+   * @param userPublicKey The user's public key
+   * @param feeToken The token to pay the fee in
+   * @returns The payment instruction and signer address from the facilitator
+   */
+  async getPaymentInstruction(
+    transaction: Transaction,
+    userPublicKey: PublicKey,
+    feeToken: string
+  ): Promise<X402PaymentInstructionResponse> {
+    try {
+      const serializedTransaction = transaction.serialize({ requireAllSignatures: false });
+      const base64Transaction = Buffer.from(serializedTransaction).toString('base64');
+
+      const request: X402PaymentInstructionRequest = {
+        transaction: base64Transaction,
+        fee_token: feeToken,
+        source_wallet: userPublicKey.toBase58(),
+      };
+
+      const response = await axios.post(
+        `${this.facilitatorUrl}/get-payment-instruction`,
+        request
+      );
+
+      return response.data as X402PaymentInstructionResponse;
+    } catch (error) {
+      console.error('Error getting payment instruction:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Prepares the transaction with the fee payment instruction from Kora.
+   * This method modifies the transaction by adding the payment instruction
+   * and setting the fee payer to the Kora signer.
+   * @param transaction The original transaction
+   * @param userPublicKey The user's public key
+   * @param feeToken The mint address of the token to pay fees in (e.g., USDC)
+   * @returns The modified transaction ready to be signed by the user.
+   */
+  async prepareTransactionWithFee(
+    transaction: Transaction,
+    userPublicKey: PublicKey,
+    feeToken: string
+  ): Promise<Transaction> {
+    // Get the payment instruction from the facilitator
+    const { payment_instruction, signer_address } = await this.getPaymentInstruction(
+      transaction,
+      userPublicKey,
+      feeToken
+    );
+
+    // The payment_instruction is a base64 encoded serialized transaction
+    // containing the necessary instruction to pay the fee.
+    const paymentTransaction = Transaction.from(
+      Buffer.from(payment_instruction, 'base64')
+    );
+
+    // Add the payment instruction from the payment transaction
+    // to the original transaction.
+    transaction.add(...paymentTransaction.instructions);
+
+    // Set the fee payer to the Kora signer address
+    transaction.feePayer = new PublicKey(signer_address);
+
+    return transaction;
   }
 
   /**
@@ -115,27 +188,53 @@ export class X402PaymentService {
    * @param payer The public key of the payer
    * @returns Settlement response from the facilitator
    */
-  async settleTransaction(
-    transaction: Transaction,
-    paymentSplits: Array<{ recipient: string; amount: number }>,
-    payer: PublicKey
-  ): Promise<X402SettlementResponse> {
-    try {
-      // Serialize the transaction
-      const serializedTransaction = transaction.serialize({ requireAllSignatures: false });
-      const base64Transaction = Buffer.from(serializedTransaction).toString('base64');
-
-      // Send to facilitator for settlement
-      const response = await axios.post(`${this.facilitatorUrl}/settle`, {
-        transaction: base64Transaction,
-        payment_splits: paymentSplits,
-        payer: payer.toString()
-      });
-
-      return response.data as X402SettlementResponse;
-    } catch (error) {
-      console.error('Error settling transaction:', error);
-      throw error;
+    async settleTransaction(
+      transaction: Transaction,
+      paymentSplits: Array<{ recipient: string; amount: number }>,
+      payer: PublicKey
+    ): Promise<X402SettlementResponse> {
+      try {
+        // Serialize the transaction
+        const serializedTransaction = transaction.serialize({ requireAllSignatures: false });
+        const base64Transaction = Buffer.from(serializedTransaction).toString('base64');
+  
+        // Send to facilitator for settlement
+        const response = await axios.post(`${this.facilitatorUrl}/settle`, {
+          transaction: base64Transaction,
+          payment_splits: paymentSplits,
+          payer: payer.toString()
+        });
+  
+        return response.data as X402SettlementResponse;
+      } catch (error) {
+        console.error('Error settling transaction:', error);
+        throw error;
+      }
+    }
+  
+    /**
+     * Submit a transaction for settlement to the facilitator using the new Kora flow.
+     * @param transaction The Solana transaction to settle
+     * @returns Settlement response from the facilitator
+     */
+    async submitTransaction(
+      transaction: Transaction,
+    ): Promise<X402SettlementResponse> {
+      try {
+        // Serialize the transaction
+        const serializedTransaction = transaction.serialize({ requireAllSignatures: false });
+        const base64Transaction = Buffer.from(serializedTransaction).toString('base64');
+  
+        // Send to facilitator for settlement
+        const response = await axios.post(`${this.facilitatorUrl}/settle`, {
+          transaction: base64Transaction,
+        });
+  
+        return response.data as X402SettlementResponse;
+      } catch (error) {
+        console.error('Error submitting transaction:', error);
+        throw error;
+      }
     }
   }
-}
+  
