@@ -46,6 +46,19 @@ export interface X402SettlementResponse {
   message: string;
 }
 
+// Request body for /get-payment-instruction
+export interface X402PaymentInstructionRequest {
+  transaction: string; // base64 encoded transaction
+  fee_token: string;
+  source_wallet: string;
+}
+
+// Response body for /get-payment-instruction
+export interface X402PaymentInstructionResponse {
+  payment_instruction: string; // base64 encoded instruction
+  signer_address: string; // public key of the fee payer
+}
+
 // Payment configuration
 export interface PaymentConfig {
   facilitatorUrl: string;
