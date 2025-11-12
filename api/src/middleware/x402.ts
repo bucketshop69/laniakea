@@ -28,15 +28,34 @@ const X402_CONFIG: X402PaymentConfig = {
 
 // x402 payment protection middleware
 export const x402PaymentMiddleware = async (
-  req: Request, 
-  res: Response, 
+  req: Request,
+  res: Response,
   next: NextFunction
 ) => {
   try {
+    // Get the queried wallet address - this wallet will be the data provider (70%)
+    const walletAddress = req.query.wallet_address as string || req.headers['x-wallet-address'] as string;
+
+    // Build dynamic payment splits - data provider gets 70%
+    const dynamicPaymentSplits = [
+      {
+        recipient: walletAddress || process.env.DATA_PROVIDER_FEE_RECIPIENT || '5oo5EhwdroKz5Jgrm2ezKsXrWrAVC2guejze8rGc1Kvo',
+        percentage: 70, // Data provider (queried wallet)
+      },
+      {
+        recipient: process.env.DEVELOPER_FEE_RECIPIENT || '2jririfhBQ6qkcyiS1G4hjxgoz2zVUhEC3dv38LukgTa',
+        percentage: 20, // Developer
+      },
+      {
+        recipient: process.env.DAO_FEE_RECIPIENT || '3njbEQNmCTh3omVFrkLcq92MZkQ9Dfrvn6LN6SKHpVmr',
+        percentage: 10, // DAO
+      },
+    ];
+
     // Check if the request includes proper payment verification
     const paymentToken = req.headers['x-payment-token'] as string;
     const paymentTx = req.headers['x-payment-tx'] as string;
-    
+
     if (!paymentToken || !paymentTx) {
       // If no payment info provided, redirect to payment flow
       // First, get supported payment methods from facilitator
@@ -48,7 +67,7 @@ export const x402PaymentMiddleware = async (
             ...supportedResponse.data,
             message: 'Payment required for this resource',
             required_amount: X402_CONFIG.requiredPayment,
-            payment_splits: X402_CONFIG.paymentSplits,
+            payment_splits: dynamicPaymentSplits, // Use dynamic splits based on queried wallet
           }
         });
         return;
@@ -66,7 +85,7 @@ export const x402PaymentMiddleware = async (
     try {
       const verifyResponse = await axios.post(`${X402_CONFIG.facilitatorUrl}/verify`, {
         transaction: paymentTx,
-        payment_splits: X402_CONFIG.paymentSplits,
+        payment_splits: dynamicPaymentSplits, // Use dynamic splits
         required_amount: X402_CONFIG.requiredPayment,
       });
 

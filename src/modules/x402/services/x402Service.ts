@@ -41,9 +41,14 @@ export class X402PaymentService {
   /**
    * Discover payment requirements from the API
    */
-  async discoverPaymentRequirements(endpoint: string): Promise<X402PaymentRequirement | null> {
+  async discoverPaymentRequirements(endpoint: string, walletAddress?: string): Promise<X402PaymentRequirement | null> {
     try {
-      const response = await axios.get(`${this.apiEndpoint}${endpoint}`, {
+      // Construct URL with wallet address query param if provided
+      const url = walletAddress
+        ? `${this.apiEndpoint}${endpoint}?wallet_address=${walletAddress}`
+        : `${this.apiEndpoint}${endpoint}`;
+
+      const response = await axios.get(url, {
         validateStatus: function (status) {
           // Accept both 200 (success) and 402 (payment required) responses
           return status === 200 || status === 402 || status === 422;
@@ -186,18 +191,37 @@ export class X402PaymentService {
       const koraSignerKey = new PublicKey(koraSignerResponse.data.signer_address);
       console.log('✅ Kora signer:', koraSignerKey.toBase58());
 
-      // STEP 2: Build transaction with payment splits
-      const transaction = new Transaction();
-
+      // STEP 2: Validate user has sufficient balance BEFORE building transaction
       const splits = paymentRequirement.x402.payment_splits;
       const totalAmount = paymentRequirement.x402.required_amount;
       const feeTokenMint = new PublicKey(paymentRequirement.x402.supported_tokens[0]);
 
+      console.log('💰 Checking user balance...');
       const userTokenAccount = await getAssociatedTokenAddress(
         feeTokenMint,
         userPublicKey
       );
 
+      let userBalance = 0;
+      try {
+        const accountInfo = await getAccount(this.connection, userTokenAccount);
+        userBalance = Number(accountInfo.amount);
+        console.log(`✅ User balance: ${userBalance / 1e6} USDC (required: ${totalAmount / 1e6} USDC)`);
+      } catch (error) {
+        console.error('❌ User token account not found or has 0 balance');
+        throw new Error(`Insufficient balance: You need ${totalAmount / 1e6} USDC but your token account was not found. Please ensure you have USDC on Solana Devnet.`);
+      }
+
+      if (userBalance < totalAmount) {
+        const balanceInTokens = userBalance / 1e6;
+        const requiredInTokens = totalAmount / 1e6;
+        throw new Error(`Insufficient balance: You have ${balanceInTokens.toFixed(2)} USDC but need ${requiredInTokens.toFixed(2)} USDC`);
+      }
+
+      // STEP 3: Build transaction with payment splits
+      const transaction = new Transaction();
+
+      // userTokenAccount already defined above during balance check
       const createdATAs = new Set<string>();
 
       for (const split of splits) {
@@ -214,16 +238,14 @@ export class X402PaymentService {
         if (!createdATAs.has(ataKey)) {
           try {
             await getAccount(this.connection, recipientTokenAccount);
+            console.log(`✓ Token account exists for ${split.recipient}`);
           } catch (error) {
-            console.log(`Creating token account for recipient ${split.recipient}`);
-            const createAccountInstruction = createAssociatedTokenAccountInstruction(
-              userPublicKey,
-              recipientTokenAccount,
-              recipientPublicKey,
-              feeTokenMint
+            // Token account doesn't exist - throw error asking user to create it
+            console.error(`❌ Token account does not exist for recipient ${split.recipient}`);
+            throw new Error(
+              `Recipient ${split.recipient} does not have a USDC token account. ` +
+              `Please ensure all recipients have USDC accounts on Solana Devnet before making payment.`
             );
-            transaction.add(createAccountInstruction);
-            createdATAs.add(ataKey);
           }
         }
 

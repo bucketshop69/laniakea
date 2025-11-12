@@ -627,7 +627,7 @@ const SpaceLiquidityPool = () => {
   );
 };
 
-import X402Demo from './modules/x402/components/X402Demo';
+import { X402DemoPage as X402Demo } from './modules/x402/components/demo/X402DemoPage';
 
 const App = () => {
   const [surface] = useState(computeSurface);

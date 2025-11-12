@@ -37,9 +37,12 @@ export const getPaymentInstructionController = async (req: Request, res: Respons
     });
   } catch (error) {
     console.error('Error in /get-payment-instruction endpoint:', error);
+    console.error('Error details:', error instanceof Error ? error.message : String(error));
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     res.status(500).json({
       error: 'Internal server error',
-      message: 'Failed to get payment instruction'
+      message: 'Failed to get payment instruction',
+      details: error instanceof Error ? error.message : String(error)
     });
   }
 };

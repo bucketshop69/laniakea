@@ -12,17 +12,17 @@ router.get('/wallet_overview', x402PaymentMiddleware, async (req: Request, res: 
     const userId = req.query.user_id as string || req.headers['x-user-id'] as string;
 
     if (!walletAddress) {
-      res.status(400).json({ 
-        error: 'Missing required parameter', 
-        message: 'wallet_address is required' 
+      res.status(400).json({
+        error: 'Missing required parameter',
+        message: 'wallet_address is required'
       });
       return;
     }
 
     if (!userId) {
-      res.status(400).json({ 
-        error: 'Missing required parameter', 
-        message: 'user_id is required' 
+      res.status(400).json({
+        error: 'Missing required parameter',
+        message: 'user_id is required'
       });
       return;
     }
@@ -34,9 +34,51 @@ router.get('/wallet_overview', x402PaymentMiddleware, async (req: Request, res: 
     res.json(walletOverview);
   } catch (error) {
     console.error('[WalletRoute] Error in /wallet_overview:', error);
-    res.status(500).json({ 
-      error: 'Internal server error', 
-      message: 'Failed to retrieve wallet overview' 
+    res.status(500).json({
+      error: 'Internal server error',
+      message: 'Failed to retrieve wallet overview'
+    });
+  }
+});
+
+// User insights endpoint (simplified for demo - shows SOL balance)
+router.get('/user_insights', x402PaymentMiddleware, async (req: Request, res: Response) => {
+  try {
+    // Extract wallet address from query parameters or headers
+    const walletAddress = req.query.wallet_address as string || req.headers['x-wallet-address'] as string;
+
+    if (!walletAddress) {
+      res.status(400).json({
+        error: 'Missing required parameter',
+        message: 'wallet_address is required'
+      });
+      return;
+    }
+
+    // Import Solana web3.js
+    const { Connection, PublicKey, clusterApiUrl } = await import('@solana/web3.js');
+
+    // Connect to devnet
+    const connection = new Connection(clusterApiUrl('devnet'), 'confirmed');
+    const pubkey = new PublicKey(walletAddress);
+
+    // Get SOL balance
+    const balance = await connection.getBalance(pubkey);
+    const solBalance = balance / 1e9; // Convert lamports to SOL
+
+    // Return simple wallet data with SOL balance
+    res.json({
+      wallet: walletAddress,
+      balance: {
+        sol: solBalance,
+        lamports: balance,
+      }
+    });
+  } catch (error) {
+    console.error('[WalletRoute] Error in /user_insights:', error);
+    res.status(500).json({
+      error: 'Internal server error',
+      message: 'Failed to retrieve user insights'
     });
   }
 });

@@ -2,6 +2,7 @@ import { KoraClient } from '@kora/sdk';
 import { Transaction, Keypair } from '@solana/web3.js';
 import * as fs from 'fs';
 import * as path from 'path';
+import bs58 from 'bs58';
 
 /**
  * Service class to interact with the Kora RPC server
@@ -64,12 +65,13 @@ export class KoraService {
       // Extract signature from the signed transaction
       const signedTransactionBuffer = Buffer.from(response.signed_transaction, 'base64');
       const signedTx = Transaction.from(signedTransactionBuffer);
-      
-      // Get the signature from the signed transaction
+
+      // Get the signature from the signed transaction and encode as base58
       if (signedTx.signatures.length > 0) {
         const firstSig = signedTx.signatures[0];
         if (firstSig && firstSig.signature) {
-          return firstSig.signature.toString();
+          // Convert signature buffer to base58 string
+          return bs58.encode(firstSig.signature);
         }
       }
       throw new Error('No signature found in the signed transaction');
