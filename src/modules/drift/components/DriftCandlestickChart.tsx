@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useMemo } from 'react'
+import { useEffect, useRef, useState, useMemo, useCallback } from 'react'
 import {
   createChart,
   ColorType,
@@ -77,19 +77,8 @@ export const DriftCandlestickChart = ({ data, isLoading, marketSymbol }: DriftCa
 
   // Load annotations when wallet connects - now dynamic based on market
   useEffect(() => {
-    console.log('[Chart] Wallet check:', {
-      hasPublicKey: !!publicKey,
-      publicKey: publicKey?.toString(),
-      isInitialized,
-      marketSymbol,
-      asset
-    })
-
     if (publicKey && isInitialized && asset) {
-      console.log('[Chart] Loading annotations for', asset, 'wallet:', publicKey.toString())
       loadAnnotations(publicKey.toString(), asset)
-    } else {
-      console.log('[Chart] Skipping annotation load - wallet not connected, chart not ready, or no asset')
     }
   }, [publicKey, isInitialized, loadAnnotations, asset])
 
@@ -286,7 +275,7 @@ export const DriftCandlestickChart = ({ data, isLoading, marketSymbol }: DriftCa
   }, [data, isInitialized])
 
   // Update marker positions with both time (X) and price (Y) coordinates
-  const updateMarkerPositions = () => {
+  const updateMarkerPositions = useCallback(() => {
     if (!chartRef.current || !seriesRef.current || annotations.length === 0 || data.length === 0) {
       setMarkerElements([])
       return
@@ -295,7 +284,14 @@ export const DriftCandlestickChart = ({ data, isLoading, marketSymbol }: DriftCa
     try {
       const timeScale = chartRef.current.timeScale()
       const series = seriesRef.current
-      const markers: typeof markerElements = []
+      const markers: {
+        id: string
+        x: number
+        y: number
+        note: string
+        timestamp: string
+        feedItemId: string | null
+      }[] = []
 
       // Get chart dimensions for bounds checking
       const chartWidth = chartRef.current.chartElement().clientWidth
@@ -304,30 +300,29 @@ export const DriftCandlestickChart = ({ data, isLoading, marketSymbol }: DriftCa
       annotations.forEach((ann) => {
         const timestamp = Math.floor(new Date(ann.timestamp).getTime() / 1000) as Time
 
-        // Get X coordinate from time
-        const xCoord = timeScale.timeToCoordinate(timestamp)
+        // Find the closest candle to get the actual time on the chart
+        const timestampMs = (timestamp as number) * 1000
+        const closestCandle = data.reduce((prev, curr) => {
+          return Math.abs(curr.time - timestampMs) < Math.abs(prev.time - timestampMs)
+            ? curr
+            : prev
+        })
 
-        // Skip if timestamp is outside visible time range (returns null or negative)
+        if (!closestCandle) {
+          return
+        }
+
+        // Use the closest candle's time for positioning
+        const candleTimestamp = Math.floor(closestCandle.time / 1000) as Time
+        const xCoord = timeScale.timeToCoordinate(candleTimestamp)
+
+        // Skip if coordinate is outside visible range
         if (xCoord === null || xCoord < 0 || xCoord > chartWidth) {
           return
         }
 
-        // Find the closest candle to get price
-        const timestampMs = (timestamp as number) * 1000
-        const candle = data.find(d => d.time === timestampMs) ||
-          data.reduce((prev, curr) => {
-            return Math.abs(curr.time - timestampMs) < Math.abs(prev.time - timestampMs)
-              ? curr
-              : prev
-          })
-
-        if (!candle) {
-          console.warn('[Chart] No candle found for annotation:', ann.note)
-          return
-        }
-
-        // Use the candle's high price to position marker above the candle
-        const price = candle.high
+        // Use the closest candle's high price to position marker above the candle
+        const price = closestCandle.high
 
         // Get Y coordinate from price
         const yCoord = series.priceToCoordinate(price)
@@ -351,7 +346,7 @@ export const DriftCandlestickChart = ({ data, isLoading, marketSymbol }: DriftCa
     } catch (error) {
       console.error('[Chart] Failed to update marker positions:', error)
     }
-  }
+  }, [annotations, data])
 
   // Add annotation markers to chart (using DOM overlay) - fully responsive
   useEffect(() => {
@@ -381,7 +376,7 @@ export const DriftCandlestickChart = ({ data, isLoading, marketSymbol }: DriftCa
       timeScale.unsubscribeVisibleLogicalRangeChange(debouncedUpdate)
       chartContainer.removeEventListener('mouseup', debouncedUpdate)
     }
-  }, [annotations, isInitialized, data])
+  }, [annotations, isInitialized, data, updateMarkerPositions])
 
   return (
     <div ref={chartContainerRef} className="relative w-full min-h-[320px] md:min-h-[520px]">

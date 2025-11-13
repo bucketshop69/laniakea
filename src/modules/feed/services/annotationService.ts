@@ -22,7 +22,7 @@ export const annotationService = {
         .from('chart_annotations')
         .insert({
           user_id: params.walletAddress,
-          asset: params.asset,
+          asset: params.asset.toLowerCase(), // Normalize to lowercase
           timestamp: params.timestamp,
           note: params.note,
           source: 'feed',
@@ -63,7 +63,7 @@ export const annotationService = {
         .from('chart_annotations')
         .insert({
           user_id: params.walletAddress,
-          asset: params.asset,
+          asset: params.asset.toLowerCase(), // Normalize to lowercase
           timestamp: params.timestamp,
           note: params.note,
           source: 'user',
@@ -96,11 +96,14 @@ export const annotationService = {
    */
   async getUserAnnotations(walletAddress: string, asset: string): Promise<ChartAnnotation[]> {
     try {
+      // Normalize asset to lowercase to match database format
+      const normalizedAsset = asset.toLowerCase()
+
       const { data, error } = await supabase
         .from('chart_annotations')
         .select('*')
         .eq('user_id', walletAddress)
-        .eq('asset', asset)
+        .eq('asset', normalizedAsset)
         .order('timestamp', { ascending: false })
 
       if (error) {
@@ -148,10 +151,12 @@ export const annotationService = {
    */
   async getAnnotationsByAsset(asset: string, limit?: number): Promise<ChartAnnotation[]> {
     try {
+      const normalizedAsset = asset.toLowerCase()
+
       let query = supabase
         .from('chart_annotations')
         .select('*')
-        .eq('asset', asset)
+        .eq('asset', normalizedAsset)
         .order('timestamp', { ascending: false })
 
       if (limit) {
@@ -241,11 +246,13 @@ export const annotationService = {
    */
   async getAnnotationCount(walletAddress: string, asset: string): Promise<number> {
     try {
+      const normalizedAsset = asset.toLowerCase()
+
       const { count, error } = await supabase
         .from('chart_annotations')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', walletAddress)
-        .eq('asset', asset)
+        .eq('asset', normalizedAsset)
 
       if (error) {
         console.error('Error counting annotations:', error)
@@ -268,8 +275,9 @@ export const annotationService = {
    */
   async canAddAnnotation(walletAddress: string, asset: string, limit = 10): Promise<boolean> {
     try {
+      // Note: getAnnotationCount already normalizes the asset internally
       const count = await this.getAnnotationCount(walletAddress, asset)
-      console.log(`[AnnotationService] Count for ${asset}: ${count}/${limit}`)
+      console.log(`[AnnotationService] Count for ${asset.toLowerCase()}: ${count}/${limit}`)
       return count < limit
     } catch (error) {
       console.error('Error checking annotation limit:', error)
