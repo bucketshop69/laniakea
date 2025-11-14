@@ -1,0 +1,64 @@
+name: Refactor / Tech Debt
+description: Code cleanup, refactoring, or technical debt
+title: "[REFACTOR] "
+labels: ["refactor", "tech-debt"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this for code improvements that don't change functionality.
+
+  - type: textarea
+    id: current-state
+    attributes:
+      label: Current State
+      description: What code needs refactoring?
+      placeholder: "The Jupiter swap logic is duplicated across 3 components..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: Why Refactor?
+      description: What problem does this solve?
+      placeholder: |
+        - Code duplication
+        - Hard to maintain
+        - Performance issues
+        - Difficult to test
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed
+    attributes:
+      label: Proposed Changes
+      description: How should it be refactored?
+      placeholder: |
+        - Extract common logic into a hook
+        - Consolidate into a single component
+        - Move to a service layer
+
+  - type: checkboxes
+    id: risks
+    attributes:
+      label: Risks
+      options:
+        - label: This could break existing functionality
+        - label: This requires extensive testing
+        - label: This changes the public API
+        - label: This affects performance
+
+  - type: textarea
+    id: checklist
+    attributes:
+      label: Refactor Checklist
+      description: Steps to complete this refactor
+      placeholder: |
+        - [ ] Write tests for current behavior
+        - [ ] Create new abstraction
+        - [ ] Migrate component A
+        - [ ] Migrate component B
+        - [ ] Remove old code
+        - [ ] Verify all tests pass

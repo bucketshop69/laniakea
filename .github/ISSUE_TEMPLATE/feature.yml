@@ -1,0 +1,67 @@
+name: Feature Request
+description: Propose a new feature or enhancement
+title: "[FEATURE] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to plan out a new feature!
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: The Problem
+      description: What problem does this feature solve?
+      placeholder: "Currently, users have to..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: How should this work?
+      placeholder: "We should build a component that..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: design
+    attributes:
+      label: Design Considerations
+      description: Any UI/UX requirements, mockups, or design notes
+      placeholder: |
+        - Should work on mobile and web
+        - Match existing design system
+        - Figma link: ...
+
+  - type: textarea
+    id: technical
+    attributes:
+      label: Technical Notes
+      description: Any implementation details, dependencies, or constraints
+      placeholder: |
+        - Needs to integrate with Jupiter SDK
+        - Should use Zustand for state
+        - Consider performance with large lists
+
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope
+      options:
+        - label: This requires design work
+        - label: This requires backend changes
+        - label: This affects mobile layout
+        - label: This needs documentation
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance Criteria
+      description: How do we know this is done?
+      placeholder: |
+        - [ ] Component renders on both mobile and web
+        - [ ] All three protocols are supported
+        - [ ] Transitions are smooth

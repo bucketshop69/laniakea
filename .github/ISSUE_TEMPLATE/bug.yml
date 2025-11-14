@@ -1,0 +1,76 @@
+name: Bug Report
+description: Report a bug or issue
+title: "[BUG] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug!
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Clear description of the bug
+      placeholder: "When I click the swap button, nothing happens"
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What should have happened?
+      placeholder: "The swap should execute and show a confirmation"
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to Reproduce
+      description: How can we reproduce this?
+      placeholder: |
+        1. Go to the app
+        2. Select Jupiter protocol
+        3. Click swap button
+        4. See error
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options:
+        - Critical - App is broken
+        - High - Major feature broken
+        - Medium - Feature works but has issues
+        - Low - Minor cosmetic issue
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Where did this happen?
+      placeholder: |
+        - Browser: Chrome 120
+        - Device: Desktop / iPhone 14
+        - Wallet: Phantom
+        - URL: https://...
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Error Messages / Logs
+      description: Any console errors or logs
+      render: shell
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: Add screenshots if helpful

@@ -1,0 +1,71 @@
+name: Design Phase
+description: Planning and design work before implementation
+title: "[DESIGN] "
+labels: ["design", "planning"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this for design-first features that need planning before coding.
+
+  - type: textarea
+    id: challenge
+    attributes:
+      label: The Challenge
+      description: What are we trying to design/solve?
+      placeholder: "We need a unified trading input that works across 3 protocols..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: not-doing
+    attributes:
+      label: What We're NOT Doing
+      description: Constraints and anti-patterns to avoid
+      placeholder: |
+        - Different layouts for mobile vs web
+        - Tab-juggling interfaces
+        - Complex multi-step flows
+
+  - type: textarea
+    id: doing
+    attributes:
+      label: What We ARE Doing
+      description: The approach and key features
+      placeholder: |
+        - One unified component
+        - Fields reconfigure when protocol changes
+        - Minimal, condensed UI
+
+  - type: textarea
+    id: requirements
+    attributes:
+      label: Design Requirements
+      description: Visual, UX, and behavioral requirements
+      placeholder: |
+        - Must work identically on web and mobile
+        - Smooth transitions when switching protocols
+        - Match existing design system
+
+  - type: textarea
+    id: deliverables
+    attributes:
+      label: Design Deliverables
+      description: What needs to be created?
+      placeholder: |
+        - [ ] Figma wireframes
+        - [ ] Mobile mockups (375px)
+        - [ ] Web mockups (1440px)
+        - [ ] Component states (loading, error, success)
+        - [ ] Animation specs
+
+  - type: textarea
+    id: success
+    attributes:
+      label: Success Criteria
+      description: How do we know the design is ready?
+      placeholder: |
+        - [ ] Design approved by stakeholders
+        - [ ] All states documented
+        - [ ] Responsive behavior defined
+        - [ ] Accessibility considered
